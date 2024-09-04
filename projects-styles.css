@@ -1,0 +1,93 @@
+
+body {
+    font-family: 'Helvetica Neue', sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    min-height: 100vh; /* Ensures the body covers the entire viewport height */
+    background: linear-gradient(135deg, rgb(224, 244, 227) 0%, #ffffff 100%);
+    background-size: 400% 400%;
+    animation: gradientAnimation 20s ease infinite;
+    overflow-y: auto; /* Adds vertical scrolling if content overflows */
+}
+
+header {
+    text-align: center;
+    margin: 1em 0;
+    width: 100%;
+    background-color: rgba(255, 255, 255, 1); /* Adds background to nav for visibility */
+    padding: 1em 0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Slight shadow for the nav bar */
+    position: sticky;
+    top: 0;
+    z-index: 2; /* Keeps the nav bar above other content */
+}
+
+nav.nav-links {
+    display: flex;
+    justify-content: center;
+    gap: 2em;
+}
+
+nav.nav-links a {
+    font-size: 1.3em;
+    color: #005f99;
+    transition: color 0.3s ease;
+}
+
+nav.nav-links a:hover {
+    color: #007acc;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+#container {
+    text-align: left;
+    max-width: 700px;
+    margin: 2em auto;
+    padding: 2.5em;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 15px;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 1;
+}
+
+.project-list {
+    overflow-y: auto; /* Allows scrolling within the project list if needed */
+}
+
+.project-list .project-item {
+    margin-bottom: 1.5em;
+}
+
+.project-list .project-item h2 {
+    font-size: 1.5em;
+    color: #007acc;
+    margin-bottom: 0.5em;
+}
+
+.project-list .project-item h2:hover {
+    color: #008cde;
+    transition: color 0.3s ease;
+}
+.project-list .project-item p {
+    font-size: 14px;
+    color: #555;
+}
+
+.footnote {
+    font-size: 0.8em; /* Smaller text size */
+    color: #aaa; /* Light gray color */
+    text-align: right;
+    right: 0; /* Align to the right edge of the container */
+    bottom: 0; /* Align to the bottom of the container */
+    margin: 0; /* Remove default margin */
+    margin-bottom: -2em;
+}

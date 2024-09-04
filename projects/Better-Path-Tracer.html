@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Article</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+
+<body>
+    <!--
+    <header>
+        <nav class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="about.html">About</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+    </header>
+ -->
+
+    <div id="ambient-detail"></div>
+    <div id="container">
+        <div id="header">
+            <h1>Better-Path-Tracer</h1>
+            <p>Rodent-Raytracer++</p>
+        </div>
+        
+        <div id="article">
+            
+
+            <div class="render-gallery">
+                    <a href="#dragon"><img src="../images/path-tracer/BDSF_microfacet.png" alt="Dragon Render"></a>
+                    <a href="#lucy"><img src="../images/path-tracer/lucy.png" alt="Lucy Render"></a>
+            </div>
+
+            <!-- <div class="single-image">
+                <a href="#dragon"><img src="../images/path-tracer/BDSF_microfacet.png" width=500px alt="Dragon Render"></a>
+            </div>
+            <div class="single-image">
+                <a href="#dragon"><img src="../images/path-tracer/BDSF_microfacet.png" width=500px alt="Dragon Render"></a>
+            </div> -->
+
+            <!-- Lightbox -->
+            <div id="dragon" class="lightbox">
+                <a href="#"><img src="../images/path-tracer/BDSF_microfacet.png" alt="Dragon Render"></a>
+            </div>
+            <div id="lucy" class="lightbox">
+                <a href="#"><img src="../images/path-tracer/lucy.png" alt="Lucy Render"></a>
+            </div>
+
+            <h2>Introduction</h2>
+            <p>
+                My last major project, <a href="Rodent-Raytracer.html"><strong>Rodent-Ray-Tracer</strong></a>, was my first ever ray tracer and introduction into path
+                tracing, physically based rendering, optics, probability, and so much more. The project was an entirely
+                self led initiative where I had to teach myself a plethora of intimidating mathematics, physics, and
+                computer science topics. Since it was the very definition of a passion project, the goals and means to
+                get them were arbitrary- it was heaps and bounds of fun, but not the most rigorous in its execution.
+                Since then I’ve been able to take Berkeley’s CS 184, Computer Graphics and Imaging, and receive some
+                absolutely incredible lectures on the precise topics that I had come across and maybe even implemented
+                but yet to fully understand in a formal context: radiometry, monte carlo integration, importance
+                sampling, acceleration structures, and more. This project is the formalization of my understanding of
+                these essential concepts.
+
+            </p>
+
+
+            <h2>Problem Statement</h2>
+            <p>
+                Creating photorealistic images involves accurately simulating how light interacts with objects in a
+                scene. Traditional rendering methods often struggle with the computational complexity and inefficiencies
+                associated with realistic light transport. Path tracing, while more accurate, requires significant
+                computational power and time, especially when dealing with complex scenes. The main challenges include
+                efficiently simulating light paths, managing the vast number of possible interactions between light and
+                surfaces, and ensuring that the rendering process is both accurate and feasible within a reasonable
+                timeframe. This project addresses these challenges by implementing advanced techniques such as backward
+                ray tracing, efficient intersection algorithms, and the use of acceleration structures like Bounding
+                Volume Hierarchies (BVH) to significantly enhance rendering performance without compromising on quality.
+            </p>
+
+
+            <h2>Technical Approach</h2>
+            <h3>Mathematics of Ray Tracing</h3>
+            <p>
+                Fundamentally, path tracing is about simulating the path of light as it travels from a source into our
+                sensor, be it our eyes or camera, and recording the light/photons into a matrix or grid of
+                intensity/color cells. The most naive way to do this is to simulate the path of every photon from a
+                source of light. This is naive because there are going to be a lot of photons emitted from any given
+                light source which don't make their way into our eyes. So rather than running a simulation on photons
+                which fly off into space and are never seen, let's only focus on simulating the light which makes it
+                into our eyes. But how do we determine which photons emit from a light source and make their way into
+                our eyes without simulating every light source to find out? He solution: backwards ray tracing.
+                Backwards ray tracing is the process of sending rays out from our eyes, effectively backwards photons,
+                into a scene and seeing whether what they hit is indeed a light source or not. Because ray tracing
+                follows the model of geometric optics which assumes euclidean space, meaning light travels in straight
+                lines, then if a straight line can be drawn from our eyes to the surface of an emissive surface, then we
+                should see light from it directly. Another problem is that there is, for our intents and purposes, an
+                infinite amount of photons landing.
+            </p>
+
+            <h4>Ray-Sphere Intersection</h4>
+            <p>
+                The first thing you do with ray tracing is ofcourse raytrace a sphere. But how do you check if and where
+                a ray intersects with a sphere? Well, this gets reduced to solving a quadratic equation.</p>
+
+            <h4>Ray-Triangle Intersection</h4>
+            <p>
+                Another, more practical way of representing an object's surface is with triangles. That is because every
+                surface in the real world which is continuous is locally manifold or flat at every point. Thus given an
+                infinite number of flat 2D shapes, we could compose them to represent any surface we want. However,
+                since computers do not have infinite resources in our finite world, we must discretize and approximate
+                things. We use triangles because they are the simplest polygon and can be used to compose all other
+                polygons. Thus the surface geometry of any 2D or 3D object can be modeled with triangles
+
+            <p>
+                Our problem is still figuring out how to algorithmically check if light ever hits the surface of an
+                object. Since we assume light travels in a straight line, and every object in our scene is composed of
+                triangle primitives, another way to state our problem is to find out how to check if our light (line)
+                ever intersects with our scene geometry (triangles). To put it simply, we need an algorithm for checking
+                ray-triangle intersections. Fortunately this can be boiled down even more because we assume every
+                triangle is flat and thus is just an area in a plane. Using math we learned in analysis
+                geometry/multivariable calculus and barycentric coordinates, we know how to algebraically check whether
+                and where a line intersects a plane and if a point (the line-plane intersection point) lies within the
+                area.
+            </p>
+
+            <p>Implementing ray-sphere and ray-triangle intersections, we're able to render these simple scenes with
+                normal shading:</p>
+
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#CBspheres"><img src="../images/path-tracer/1.2_spheres.png" alt="CBspheres.dae"></a>
+                    <div class="caption">CBspheres.dae (16 primitives)</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#teapot"><img src="../images/path-tracer/1.4_teapot.png" alt="teapot.dae"></a>
+                    <div class="caption">teapot.dae (2464 triangles)</div>
+                </div>
+            </div>
+
+            <p>
+                Fortunately again, this problem of ray-triangle intersection is so fundamental to raytracing, some very
+                efficient algorithms have been devised by some very smart people in the past to make this as fast as
+                possible. As one can imagine, if we want to render an NxM image and our scene objects have P primitives,
+                in the best case, we’re going to be running an intersection algorithm NxM times and at worst NxMxP
+                times.
+            </p>
+
+            <p>
+                Let N, M, P = 1000, giving us a spantty standard resolution and an embarrassingly low polygon count for
+                a
+                scene. This is 1000^3 = (10^3)^3 = 10^9 = 1,000,000,000. One billion of any operation on any machine is
+                going to take some time. However, in 2019, Pixar boasted having scenes with polygon counts in the
+                trillions, so what gives? How are these scenes being rendered in our lifetimes given the algorithmic
+                time complexity we see at hand.
+            </p>
+
+            <h3>Data Structures and Algorithms in Ray Tracing</h3>
+            <h4>Scene Representation</h4>
+            <p>
+                Imagine a typical scene, such as a living room filled with furniture, decorations, and perhaps a teapot
+                on a table. This scene consists of numerous geometric primitives that define each object within it. When
+                rendering the scene, rays are cast from the camera into the space to determine visibility and light
+                interaction for each pixel on the screen. In a naive approach, every ray would need to be tested against
+                every primitive to check for intersections. While this method is accurate, it is highly inefficient and
+                impractical, especially in complex scenes where most rays interact with only a few objects and miss the
+                majority. </p>
+
+            <p>Consider our scene again. The teapot occupies only a small fraction of the entire space, meaning that
+                many rays will pass through empty areas without intersecting the teapot or other objects. Without
+                optimization, the ray tracer would waste valuable time checking for intersections in these empty spaces.
+                Since our scenes and objects are composed of geometric primitives, there’s no inherent order to these
+                primitives. But let’s see if there's a way we can define some structure on our data (see what I did
+                there? ;)) and exploit it to improve the efficiency of the ray tracing process.</p>
+            <h4>Acceleration Structures</h4>
+            <p>
+                Achieving accurate rendering is crucial, but doing so efficiently—within our lifetimes—is equally
+                important. The enormous amount of computations and data involved in path tracing necessitates the use of
+                specialized data structures and algorithms to manage the process effectively. This is where acceleration
+                structures come into play. </p>
+
+            <p>
+                Acceleration structures are designed specifically to address inefficiencies like those seen with our
+                teapot example. By organizing geometric data in a way that enables efficient access and exclusion of
+                irrelevant parts of the scene, these structures drastically reduce the number of intersection tests
+                required during rendering.
+            </p>
+            <ul>
+                <li>Bounding Volume Hierarchies (BVH): In this method, the scene is divided into a hierarchy of nested
+                    bounding volumes, each encapsulating a group of primitives. When a ray is cast, it is first tested
+                    against these bounding volumes. If a ray misses a bounding volume, all the primitives it contains
+                    are immediately discarded, avoiding unnecessary computations.</li>
+                <li>k-D Trees: This structure recursively subdivides the scene along its spatial dimensions, organizing
+                    primitives into a binary tree. Like BVH, if a ray doesn’t intersect a certain region of the k-D
+                    tree, all associated primitives are excluded from further testing.</li>
+                <li>Grids: A uniform grid divides the scene into equally sized cells, each containing a list of
+                    primitives. Rays traverse the grid, testing for intersections only within the cells they pass
+                    through, which can be much more efficient than testing against all primitives in the scene.
+                </li>
+            </ul>
+
+            <p>
+                These acceleration structures are not just useful—they are essential for making path tracing feasible in
+                complex scenes. By leveraging data structures and algorithms, we not only ensure the accuracy of the
+                rendering but also achieve this within a reasonable timeframe, making advanced rendering techniques like
+                path tracing practical for real-world applications.
+            </p>
+            <h4>Bounding Volume Hierarchy</h4>
+            <p>
+                We construct our BVH in a very simple and balanced manor. Given a list of primitives, we compute the
+                bounding box of all the primitives. If the number of primitives exceeds a threshold, we compute the axis
+                of the longest side of the bounding box and sort the geometry along its position’s coordinate for that
+                axis. Finally we split this sorted list in half, recusing until the list’s length is below the initial
+                threshold.
+            </p>
+
+            <p>
+                The asymptotic difference between performing ray intersection with and without a BVH is the difference
+                between O(log N) and O(N) respectively. We know for large N the clock time difference becomes
+                astronomical. Our results show that the BVH acceleration resulted in an order of magnitude increase in
+                performance.
+            </p>
+
+            <pre><code>
+Without BVH:
+- Rays processed per second: 7,600
+- Average intersection tests per ray: 1,073
+- Time to render: 22.7296 seconds
+
+
+With BVH:
+- Rays processed per second: 1,546,600
+- Average intersection tests per ray: 7
+- Time to render: 0.1046 seconds
+</code></pre>
+
+            <h3>Show images with normal shading for a few large .dae files that you can only render with BVH
+                acceleration.</h3>
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#cow"><img src="../images/path-tracer/2.1_cow.png" alt="cow.dae"></a>
+                    <div class="caption">cow.dae</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#CBlucy"><img src="../images/path-tracer/2.2_lucy.png" alt="CBlucy.dae"></a>
+                    <div class="caption">CBlucy.dae</div>
+                </div>
+            </div>
+
+            <h3>Mathematics of Path Tracing</h3>
+
+            <p>
+                When rendering a scene in computer graphics, path tracing simulates the complex behavior of light by
+                tracing the paths of photons as they interact with surfaces. The goal is to capture not just direct
+                illumination but also how light reflects and refracts between various surfaces before reaching the
+                observer. This involves solving the rendering equation, which integrates over all possible light paths
+                to determine the outgoing radiance at a point.
+            </p>
+            <p>
+                In path tracing, the behavior of light is modeled by tracing the paths of photons as they reflect and
+                refract through a scene. Each photon’s path is a solution to the rendering equation, which is an
+                integral equation that computes the outgoing radiance \( L_o(x, \omega_o) \) at a point
+                \( x \) in direction \( \omega_o \) by considering the sum of emitted and reflected light
+                contributions:
+            </p>
+            <p>
+                \[
+                L_o(x, \omega_o) = L_e(x, \omega_o) + \int_{H^2} f_r(x, \omega_i, \omega_o) L_i(x, \omega_i) (\omega_i
+                \cdot n) \, d\omega_i
+                \]
+            </p>
+
+            <!--     
+<h3>Comparison of Uniform Hemisphere Sampling vs. Light Sampling</h3>
+<div class="render-gallery">
+  <div class="render-gallery-item">
+    <a href="#CBbunny_hemisphere"><img src="../images/path-tracer/3.1_bunny_hemisphere_sample.png" alt="CBbunny.dae"></a>
+    <div class="caption">Uniform Hemisphere Sampling</div>
+  </div>
+  <div class="render-gallery-item">
+    <a href="#CBbunny_light"><img src="../images/path-tracer/3.2_bunny_light_sample.png" alt="CBbunny.dae"></a>
+    <div class="caption">Light Sampling</div>
+  </div>
+  <div class="render-gallery-item">
+    <a href="#CBspheres_hemisphere"><img src="../images/path-tracer/3.3_spheres_hemisphere_sample.png" alt="CBspheres_lambertian.dae"></a>
+    <div class="caption">Uniform Hemisphere Sampling (CBspheres_lambertian.dae)</div>
+  </div>
+  <div class="render-gallery-item">
+    <a href="#CBspheres_light"><img src="../images/path-tracer/3.4_spheres_light_sample.png" alt="CBspheres_lambertian.dae"></a>
+    <div class="caption">Light Sampling (CBspheres_lambertian.dae)</div>
+  </div>
+</div>
+
+<h3>Focus on one particular scene with at least one area light and compare the noise levels in <b>soft shadows</b> when rendering with 1, 4, 16, and 64 light rays (the -l flag) and with 1 sample per pixel (the -s flag) using light sampling, <b>not</b> uniform hemisphere sampling.</h3>
+<div class="render-gallery">
+  <div class="render-gallery-item">
+    <a href="#CBspheres_1_light"><img src="../images/path-tracer/3.5_spheres_1_light_sample.png" alt="1 Light Ray"></a>
+    <div class="caption">1 Light Ray (CBspheres_lambertian.dae)</div>
+  </div>
+  <div class="render-gallery-item">
+    <a href="#CBspheres_4_light"><img src="../images/path-tracer/3.6_spheres_4_light_sample.png" alt="4 Light Rays"></a>
+    <div class="caption">4 Light Rays (CBspheres_lambertian.dae)</div>
+  </div>
+  <div class="render-gallery-item">
+    <a href="#CBspheres_16_light"><img src="../images/path-tracer/3.7_spheres_16_light_sample.png" alt="16 Light Rays"></a>
+    <div class="caption">16 Light Rays (CBspheres_lambertian.dae)</div>
+  </div>
+  <div class="render-gallery-item">
+    <a href="#CBspheres_64_light"><img src="../images/path-tracer/3.8_spheres_64_light_sample.png" alt="64 Light Rays"></a>
+    <div class="caption">64 Light Rays (CBspheres_lambertian.dae)</div>
+  </div>
+</div> -->
+
+            <!-- 
+<h3>Pick one scene and compare rendered views with various sample-per-pixel rates. Render at s=1, s=2, s=4, s=8, s=16, s=64, and s=1024 (the -s flag).</h3>
+<div class="render-gallery">
+  <div class="render-gallery-item">
+    <a href="#CBspheres_s1"><img src="../images/path-tracer/4.23_spheres_s_1.png" alt="1 sample per pixel"></a>
+    <div class="caption">1 sample per pixel (CBspheres_lambertian.dae)</div>
+  </div>
+  <div class="render-gallery-item">
+    <a href="#CBspheres_s2"><img src="../images/path-tracer/4.24_spheres_s_2.png" alt="2 samples per pixel"></a>
+    <div class="caption">2 samples per pixel (CBspheres_lambertian.dae)</div>
+  </div>
+  <div class="render-gallery-item">
+    <a href="#CBspheres_s4"><img src="../images/path-tracer/4.25_spheres_s_4.png" alt="4 samples per pixel"></a>
+    <div class="caption">4 samples per pixel (CBspheres_lambertian.dae)</div>
+  </div>
+  <div class="render-gallery-item">
+    <a href="#CBspheres_s8"><img src="../images/path-tracer/4.26_spheres_s_8.png" alt="8 samples per pixel"></a>
+    <div class="caption">8 samples per pixel (CBspheres_lambertian.dae)</div>
+  </div>
+  <div class="render-gallery-item">
+    <a href="#CBspheres_s16"><img src="../images/path-tracer/4.27_spheres_s_16.png" alt="16 samples per pixel"></a>
+    <div class="caption">16 samples per pixel (CBspheres_lambertian.dae)</div>
+  </div>
+  <div class="render-gallery-item">
+    <a href="#CBspheres_s64"><img src="../images/path-tracer/4.28_spheres_s_64.png" alt="64 samples per pixel"></a>
+    <div class="caption">64 samples per pixel (CBspheres_lambertian.dae)</div>
+  </div>
+  <div class="render-gallery-item">
+    <a href="#CBspheres_s1024"><img src="../images/path-tracer/4.29_spheres_s_1024.png" alt="1024 samples per pixel"></a>
+    <div class="caption">1024 samples per pixel (CBspheres_lambertian.dae)</div>
+  </div>
+</div>
+
+<h3>Render a scene at a high sample rate (e.g., 1024) with adaptive sampling enabled. Compare the rendered image with the sample rate image output.</h3>
+<div class="render-gallery">
+  <div class="render-gallery-item">
+    <a href="#CBspheres_adaptive"><img src="../images/path-tracer/5.1_spheres.png" alt="Rendered image"></a>
+    <div class="caption">Rendered image (CBspheres_lambertian.dae)</div>
+  </div>
+  <div class="render-gallery-item">
+    <a href="#CBspheres_sample_rate"><img src="../images/path-tracer/5.1_spheres_rate.png" alt="Sample rate image"></a>
+    <div class="caption">Sample rate image (CBspheres_lambertian.dae)</div>
+  </div>
+</div> -->
+
+
+
+            <h4>Light Transport Equation</h4>
+            <p>
+                The Light Transport Equation (LTE), formalized by James Kajiya, describes how light is transferred
+                through a scene by combining both direct and indirect illumination. It integrates the effects of light
+                emitted by sources and the light that is reflected from other surfaces within the scene. The LTE is
+                crucial for simulating realistic lighting, as it provides a comprehensive model of light interaction in
+                a physical environment.
+            </p>
+            <p>
+                The Light Transport Equation, or rendering equation, is an integral equation describing the balance of
+                radiance leaving a point in a particular direction. It is expressed as:
+            </p>
+            <p>
+                \[
+                L_o(x, \omega_o) = L_e(x, \omega_o) + \int_{\Omega} L_i(x, \omega_i) f_r(x, \omega_i, \omega_o)
+                (\omega_i \cdot n) \, d\omega_i
+                \]
+            </p>
+
+            <h4>Global Illumination</h4>
+            <p>
+                Global Illumination (GI) encompasses techniques that simulate how light interacts with surfaces
+                throughout a scene, not just from direct sources. It accounts for the complex interactions of light,
+                including reflections, refractions, and indirect illumination effects such as color bleeding and soft
+                shadows. GI aims to produce images that closely resemble real-world lighting by capturing these
+                intricate light interactions.
+            </p>
+            <p>
+                Global Illumination techniques aim to solve the full rendering equation, taking into account both direct
+                and indirect lighting. This often involves computing the sum of an infinite series of light bounces:
+            </p>
+            <p>
+                \[
+                L_o(x, \omega_o) = L_e(x, \omega_o) + \sum_{i=1}^{\infty} \int_{\Omega_i} L_i(x_i, \omega_i) f_r(x_i,
+                \omega_i, \omega_o) (\omega_i \cdot n_i) \, d\omega_i
+                \]
+            </p>
+
+
+            <p>The difference between integrating increasing number of light bounces:</p>
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#CBbunny_0_bounce"><img src="../images/path-tracer/4.5_bunny_0_bounce.png"
+                            alt="max_ray_depth = 0"></a>
+                    <div class="caption">max_ray_depth = 0</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#CBbunny_1_bounce"><img src="../images/path-tracer/4.18_bunny_1_bounce_roulette.png"
+                            alt="max_ray_depth = 1"></a>
+                    <div class="caption">max_ray_depth = 1</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#CBbunny_2_bounce"><img src="../images/path-tracer/4.19_bunny_2_bounce_roulette.png"
+                            alt="max_ray_depth = 2"></a>
+                    <div class="caption">max_ray_depth = 2</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#CBbunny_100_bounce"><img src="../images/path-tracer/4.22_bunny_100_bounce_roulette.png"
+                            alt="max_ray_depth = 100"></a>
+                    <div class="caption">max_ray_depth = 100</div>
+                </div>
+            </div>
+
+            <p>Global Illumination is made from both direct and indirect lighting:</p>
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#CBbunny_direct"><img src="../images/path-tracer/4.3_bunny_direct.png"
+                            alt="Only direct illumination"></a>
+                    <div class="caption">Only direct illumination</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#CBbunny_indirect"><img src="../images/path-tracer/4.4_bunny_indirect.png"
+                            alt="Only indirect illumination"></a>
+                    <div class="caption">Only indirect illumination</div>
+                </div>
+            </div>
+
+            <p>Some pretty renders with global illumination:</p>
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#CBbunny_global"><img src="../images/path-tracer/4.1_bunny_global.png"
+                            alt="CBbunny.dae"></a>
+                    <div class="caption">CBbunny.dae</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#CBspheres_global"><img src="../images/path-tracer/4.2_spheres_global.png"
+                            alt="CBspheres_lambertian.dae"></a>
+                    <div class="caption">CBspheres_lambertian.dae</div>
+                </div>
+            </div>
+
+            <h4>Monte Carlo Integration</h4>
+            <p>
+                Monte Carlo Integration is used to estimate the integral representing the light contribution at a point
+                by averaging random samples. This statistical method is applied in path tracing to approximate the
+                integral of light paths through a scene, improving the accuracy of rendered images with sufficient
+                samples.
+            </p>
+            <p>
+                Monte Carlo Integration estimates an integral by taking the average of a function evaluated at random
+                sample points. For the rendering equation, this is expressed as:
+            </p>
+            <p>
+                \[
+                L_o(x, \omega_o) \approx \frac{1}{N} \sum_{j=1}^{N} \left[ \frac{f_r(x, \omega_i^j, \omega_o) L_i(x,
+                \omega_i^j) (\omega_i^j \cdot n)}{p(\omega_i^j)} \right]
+                \]
+            </p>
+
+            <h4>Sampling Techniques</h4>
+            <p>
+                Efficient sampling techniques focus computational resources on significant light paths to solve the
+                Light Transport Equation effectively. Techniques such as light sampling prioritize rays interacting with
+                light sources, reducing variance and improving convergence in the rendered image.
+            </p>
+            <p>
+                Efficient sampling techniques reduce the variance in Monte Carlo estimates by focusing on important
+                paths. For example, in importance sampling, samples are drawn according to a probability density
+                function \( p(x) \) that is proportional to the function being integrated:
+            </p>
+            <p>
+                \[
+                \int f(x) \, dx \approx \frac{1}{N} \sum_{i=1}^{N} \left[ \frac{f(x_i)}{p(x_i)} \right]
+                \]
+            </p>
+
+            <h4>Russian Roulette</h4>
+            <p>
+                Russian Roulette is a technique used to probabilistically terminate light paths to manage computational
+                efficiency. After a certain number of bounces, each ray has a probability of being terminated, and its
+                contribution is adjusted to ensure energy conservation in the final image.
+            </p>
+            <p>
+                Russian Roulette reduces computational load by terminating light paths probabilistically. If a path is
+                terminated at a bounce with probability \( P \), the contribution of that path is scaled by \(
+                \frac{1}{P} \)
+                to maintain unbiasedness:
+            </p>
+            <p>
+                \[
+                \text{Contribution} = \frac{1}{P} \text{ (if terminated)}
+                \]
+            </p>
+
+            <h3>Bidirectional Scattering Distribution Function (BSDF)</h3>
+            <p>
+                The Bidirectional Scattering Distribution Function (BSDF) is a fundamental concept in computer graphics
+                that
+                describes how light interacts with surfaces. It encompasses both reflection and transmission
+                (refraction) models,
+                providing a unified framework for simulating various material properties.
+            </p>
+
+            <p>Path tracing relies on simulating light interactions with various surfaces to achieve realistic images.
+                The interaction of light with a surface is described by the Bidirectional Reflectance Distribution
+                Function (BRDF), which encapsulates different reflection and transmission properties. This overview
+                examines three critical reflection models: Lambertian reflection, combined reflective and refractive
+                surfaces (such as glass), and the microfacet model.</p>
+
+            <h4>Lambertian Reflection Model</h4>
+
+            <p>The Lambertian reflection model is used to simulate perfectly diffuse surfaces, where light scatters
+                uniformly in all directions, independent of the viewing angle. Based on Lambert's Cosine Law, the
+                intensity of the reflected light depends on the cosine of the angle between the incident light and the
+                surface normal.</p>
+
+            <p>The reflected radiance \( L_o \) from a Lambertian surface is expressed as:</p>
+
+            \[
+            L_o(x, \omega_o) = \frac{\rho}{\pi} L_i(x, \omega_i) (\omega_i \cdot n)
+            \]
+
+            <p>where \( \rho \) represents the surface's albedo (reflectance), \( L_i(x, \omega_i) \) is the incident
+                radiance, \( \omega_i \) is the incident light direction, and \( n \) is the surface normal.</p>
+
+            <div class="single-image">
+                <a href="#BSDF_lambertian"><img src="../images/path-tracer/BDSF_lambertian.png" width="400px"
+                        alt="Lambertian Bunny"></a>
+                <div class="caption">Lambertian Bunny</div>
+            </div>
+
+            <!-- Lightbox -->
+            <div id="BSDF_lambertian" class="lightbox">
+                <a href="#"><img src="../images/path-tracer/BDSF_lambertian.png" alt="Lambertian Bunny"></a>
+            </div>
+
+
+
+            <h4>Reflective and Refractive Models (Combined Reflection and Transmission)</h4>
+
+            <p>Materials like glass and water exhibit both reflective and refractive properties. The interaction of
+                light with these materials involves a combination of reflection and transmission, governed by the
+                Fresnel equations.</p>
+
+            <p><strong>Glass BSDF (Bidirectional Scattering Distribution Function):</strong> This model captures both
+                the reflection and refraction behaviors of light as it interacts with a surface, splitting into
+                reflected and transmitted components.</p>
+
+            <p><strong>Fresnel Effect:</strong> The Fresnel equations describe how the proportion of light that is
+                reflected versus refracted changes with the angle of incidence. At glancing angles, more light is
+                reflected, while at normal incidence, more light is transmitted.</p>
+
+            <p>For reflection:</p>
+
+            \[
+            L_{o,\text{reflect}}(x, \omega_o) = F(\omega_i, n) \cdot L_i(x, \omega_r)
+            \]
+
+            <p>For refraction:</p>
+
+            \[
+            L_{o,\text{refract}}(x, \omega_o) = (1 - F(\omega_i, n)) \cdot L_i(x, \omega_t)
+            \]
+
+            <p>Here, \( F(\omega_i, n) \) is the Fresnel reflectance, \( \omega_r \) is the reflected direction, and \(
+                \omega_t \) is the refracted direction.</p>
+
+            <div class="single-image">
+                <a href="#BSDF_glass"><img src="../images/path-tracer/BSDF_glass.png" width="400px"
+                        alt="Glass Spheres"></a>
+                <div class="caption">Glass Spheres</div>
+            </div>
+
+            <!-- Lightbox -->
+            <div id="BSDF_glass" class="lightbox">
+                <a href="#"><img src="../images/path-tracer/BDSF_glass.png" alt="Glass Spheres"></a>
+            </div>
+
+
+
+            <h4>Microfacet Reflection Model</h4>
+
+            <p>The microfacet model simulates the complex interaction of light with rough surfaces at a microscopic
+                level. Unlike smooth surfaces, rough surfaces consist of tiny facets, each acting like a mirror. The
+                collective effect of these microfacets determines the overall reflection characteristics.</p>
+
+            <p>The Bidirectional Reflectance Distribution Function (BRDF) for the microfacet model is expressed as:</p>
+
+            \[
+            f_r(\omega_i, \omega_o) = \frac{F(\omega_i) \cdot G(\omega_o, \omega_i) \cdot D(h)}{4 \cdot (n \cdot
+            \omega_o) \cdot (n \cdot \omega_i)}
+            \]
+
+            <ul>
+                <li>\( F(\omega_i) \) is the Fresnel term.</li>
+                <li>\( G(\omega_o, \omega_i) \) is the geometric attenuation factor.</li>
+                <li>\( D(h) \) is the normal distribution function.</li>
+                <li>\( n \) is the surface normal.</li>
+                <li>\( h \) is the half-vector.</li>
+            </ul>
+
+            <h5>Fresnel Term</h5>
+            <p>The Fresnel term accounts for how light reflects off a conductor at different angles. It can be
+                approximated as:</p>
+
+            \[
+            F = \frac{R_s + R_p}{2}
+            \]
+
+            <ul>
+                <li>\( R_s \) is the reflectance coefficient for s-polarized light, given by:</li>
+                \[
+                R_s = \frac{(\eta^2 + k^2) - 2\eta \cos \theta_i + \cos^2 \theta_i}{(\eta^2 + k^2) + 2\eta \cos \theta_i
+                + \cos^2 \theta_i}
+                \]
+
+                <li>\( R_p \) is the reflectance coefficient for p-polarized light, given by:</li>
+                \[
+                R_p = \frac{(\eta^2 + k^2) \cos^2 \theta_i - 2\eta \cos \theta_i + 1}{(\eta^2 + k^2) \cos^2 \theta_i +
+                2\eta \cos \theta_i + 1}
+                \]
+
+                <li>\( \eta \) is the refractive index of the conductor.</li>
+                <li>\( k \) is the extinction coefficient of the conductor.</li>
+                <li>\( \theta_i \) is the angle of incidence.</li>
+            </ul>
+
+            <h5>Geometric Attenuation Factor</h5>
+            <p>The geometric attenuation factor accounts for the shadowing and masking effects between microfacets,
+                ensuring that only visible microfacets contribute to the reflected light. It is given by:</p>
+
+            \[
+            G(\omega_o, \omega_i) = \frac{1}{1 + \Lambda(\omega_i) + \Lambda(\omega_o)}
+            \]
+
+            <ul>
+                <li>\( G(\omega_o, \omega_i) \) is the geometric attenuation factor.</li>
+                <li>\( \Lambda(\omega_i) \) is the shadowing and masking function for the incident direction \( \omega_i
+                    \).</li>
+                <li>\( \Lambda(\omega_o) \) is the shadowing and masking function for the outgoing direction \( \omega_o
+                    \).</li>
+            </ul>
+
+            <p>The lambda functions model the extent to which microfacets are shadowed or masked by other facets in
+                their vicinity.</p>
+
+            <h5>Normal Distribution Function</h5>
+            <p>Models how microfacet normals are distributed. The Beckmann distribution, which is one of many normal
+                distribution functions (NDF), is defined as:</p>
+
+            \[
+            D(h) = \frac{e^{-\tan^2 \theta_h / \alpha^2}}{\pi \alpha^2 \cos^4 \theta_h}
+            \]
+
+            <ul>
+                <li>\( D(h) \) is the normal distribution function.</li>
+                <li>\( \alpha \) represents the surface roughness.</li>
+                <li>\( \theta_h \) is the angle between the half-vector \( h \) and the surface normal \( n \).</li>
+                <li>\( h \) is the half-vector.</li>
+            </ul>
+
+
+            <div class="single-image">
+                <a href="#BSDF_microfacet"><img src="../images/path-tracer/BDSF_microfacet.png" width="400px"
+                        alt="Microfacet Dragon"></a>
+                <div class="caption">Microfacet Dragon</div>
+            </div>
+
+
+            <!-- Lightbox -->
+            <div id="BSDF_microfacet" class="lightbox">
+                <a href="#"><img src="../images/path-tracer/BDSF_microfacet.png" alt="Microfacet Dragon"></a>
+            </div>
+
+        </div>
+    </div>
+
+
+</body>
+
+</html>

@@ -1,0 +1,397 @@
+body {
+    font-family: 'Helvetica Neue', sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    height: 100vh;
+    background: linear-gradient(135deg, rgb(224, 244, 227) 0%, #ffffff 100%);
+    background-size: 400% 400%;
+    animation: gradientAnimation 20s ease infinite;
+}
+
+@keyframes gradientAnimation {
+    0% { background-position: 0% 0%; }
+    50% { background-position: 100% 100%; }
+    100% { background-position: 0% 0%; }
+}
+
+#ambient-detail {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    background: radial-gradient(circle, rgba(0, 0, 0, 1), transparent 50%);
+    animation: ambientGlow 10s infinite ease-in-out;
+}
+
+@keyframes ambientGlow {
+    0% { opacity: 0.05; }
+    50% { opacity: 0.1; }
+    100% { opacity: 0.05; }
+}
+
+header {
+    text-align: center;
+    width: 100%;
+    background-color: rgba(255, 255, 255, 1);
+    padding: 1em 0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+nav.nav-links {
+    display: flex;
+    justify-content: center;
+    gap: 2em;
+}
+
+nav.nav-links a {
+    font-size: 1.3em;
+    color: #005f99;
+    transition: color 0.3s ease;
+}
+
+nav.nav-links a:hover {
+    color: #007acc;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+#container {
+    height: 75%;
+    width: min(75%, 800px);
+    max-width: 800px;
+    margin: 2em auto;
+    padding: 3em;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 15px;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 1;
+    animation: fadeIn 3s ease-in-out;
+    text-align: left;
+    overflow-y: auto;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+#header {
+    text-align: left;
+    margin-bottom: 1em;
+}
+
+#header h1 {
+    font-size: 2.5em;
+    color: #007acc;
+    margin: 0;
+    font-weight: lighter;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+}
+
+#header p {
+    font-size: 1.3em;
+    color: #005f99;
+    margin-bottom: 1.5em;
+}
+
+#intro p {
+    font-size: 1.1em;
+    color: #555;
+    margin-bottom: 2em;
+}
+
+#article {
+    font-size: 1.2em;
+    color: #333;
+    line-height: 1.6;
+    margin: 1em;
+}
+
+#article h2 {
+    color: #007acc;
+    margin-top: 1.5em;
+}
+
+#article p, #article ul {
+    margin: 0.5em;
+    margin-bottom: 1.5em;
+    font-size: 14px;
+}
+
+#article ul {
+    list-style: none; /* Removes default bullet points */
+    padding-left: 0;
+}
+
+#article ul li {
+    margin-bottom: 0.75em;
+    position: relative;
+    padding-left: 1.5em;
+    font-size: 14px;
+}
+
+#article ul li::before {
+    content: '•'; /* Using a bullet character */
+    color: #007acc; /* Bullet color */
+    font-size: 1.2em;
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+#video-container {
+    width: 100%;
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    margin-bottom: 2em;
+}
+
+#video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+.render-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px; /* Increase gap for space between image and caption */
+    margin-bottom: 2em;
+}
+
+.render-gallery-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.render-gallery img {
+    width: 100%;
+    border-radius: 10px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.render-gallery img:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.render-gallery .caption {
+    margin-top: 0.5em; /* Space between image and caption */
+    font-size: 14px;
+    color: #555;
+    text-align: center;
+}
+
+.single-image {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 2em;
+}
+
+.single-image img {
+    max-width: 100%;
+    border-radius: 10px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.single-image img:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.single-image .caption {
+    margin-top: 0.5em; /* Space between image and caption */
+    font-size: 1em;
+    color: #333;
+    text-align: center;
+}
+
+.lightbox {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    justify-content: center;
+    align-items: center;
+}
+
+.lightbox img {
+    max-width: 80%;
+    max-height: 80%;
+    height: auto;
+    border-radius: 10px;
+    display: block;
+    margin: auto;
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.lightbox:target {
+    display: flex;
+}
+
+.lightbox:target:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+}
+
+.lightbox:target a {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+}
+
+.lightbox a {
+    display: block;
+    width: 100%;
+    height: 100%;
+    outline: none;
+}
+
+pre {
+    line-height: 1.1em;
+    font-size: 14px;
+    white-space: pre; /* Prevents text from wrapping */
+    overflow-x: auto; /* Enables horizontal scrolling */
+    text-align: left; /* Keeps the text left-aligned */
+    margin: 0 auto; /* Centers the container */
+    width: fit-content; /* Adjusts the width of the container to the content */
+    max-width: 100%; /* Ensures the container doesn't exceed the parent width */
+    tab-size: 4; /* Adjusts the tab width to be 4 spaces */
+    -moz-tab-size: 4; /* Firefox-specific setting for tab size */
+}
+
+code {
+    font-family: 'Courier New', Courier, monospace;
+    display: inline-block;
+}
+
+/* Lightbox styles for both images and videos */
+.lightbox {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.lightbox img, .lightbox video {
+    max-width: 80%;
+    max-height: 80%;
+    width: 60%;
+    height: auto;
+    border-radius: 10px;
+    display: block;
+    margin: auto;
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+    object-fit: contain; /* Ensures aspect ratio is maintained */
+}
+
+
+
+.lightbox:target {
+    display: flex;
+}
+
+.lightbox:target:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+}
+
+.lightbox a {
+    display: block;
+    width: 100%;
+    height: 100%;
+    outline: none;
+}
+
+
+.single-video {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2em;
+}
+
+.single-video video {
+    max-width: 100%;
+    border-radius: 10px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.single-video video:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.lightbox video {
+    max-width: 80%;
+    max-height: 80%;
+    border-radius: 10px;
+    display: block;
+    margin: auto;
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Improved inline math style */
+.math-inline {
+    font-family: 'Courier New', Courier, monospace;
+    background-color: #f5f5f5; /* Slightly lighter background for better readability */
+    color: #333; /* Darker text color for better contrast */
+    border-radius: 4px;
+    padding: 2px 4px; /* Reduced padding for a cleaner look */
+    font-size: 0.95em; /* Slightly adjusted font size for better integration */
+    white-space: nowrap; /* Prevent line breaks */
+    display: inline; /* Keeps it inline with text */
+    line-height: 1.4; /* Improved line height for readability */
+    vertical-align: middle; /* Align with the surrounding text vertically */
+    border: 1px solid #ddd; /* Light border for subtle separation */
+}
