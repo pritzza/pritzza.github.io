@@ -197,7 +197,7 @@ a {
 
 .render-gallery .caption {
     margin-top: 0.5em; /* Space between image and caption */
-    font-size: 14px;
+    font-size: 14px !important;
     color: #555;
     text-align: center;
 }
@@ -222,7 +222,7 @@ a {
 
 .single-image .caption {
     margin-top: 0.5em; /* Space between image and caption */
-    font-size: 1em;
+    font-size: 14px !important;
     color: #333;
     text-align: center;
 }
@@ -352,7 +352,6 @@ code {
     outline: none;
 }
 
-
 .single-video {
     display: flex;
     justify-content: center;
@@ -394,4 +393,47 @@ code {
     line-height: 1.4; /* Improved line height for readability */
     vertical-align: middle; /* Align with the surrounding text vertically */
     border: 1px solid #ddd; /* Light border for subtle separation */
+}
+
+/* Media Query for Mobile Devices */
+@media (max-width: 768px) {
+    body, html {
+        overflow-x: hidden; /* Prevent horizontal overflow */
+    }
+
+    #container {
+        margin: 0;
+        padding: 1em; /* Adjust padding for smaller screens */
+        width: 100%; /* Ensure container takes full width */
+        box-sizing: border-box; /* Include padding in width calculation */
+    }
+    
+    #article {
+        margin: 0;
+        padding: 0 1em; /* Ensure padding for better readability */
+    }
+
+    #video-container {
+        margin-bottom: 1em; /* Adjust margin for smaller screens */
+        width: 100%; /* Ensure video container takes full width */
+        box-sizing: border-box; /* Include padding in width calculation */
+    }
+
+    .render-gallery {
+        gap: 10px; /* Adjust gap between items */
+        width: 100%; /* Ensure gallery takes full width */
+        box-sizing: border-box; /* Include padding in width calculation */
+    }
+
+    .single-image, .single-video {
+        margin-bottom: 1em; /* Adjust margin for smaller screens */
+        width: 100%; /* Ensure images and videos take full width */
+        box-sizing: border-box; /* Include padding in width calculation */
+    }
+
+    pre {
+        margin: 0; /* Remove margin */
+        width: 100%; /* Ensure pre elements take full width */
+        box-sizing: border-box; /* Include padding in width calculation */
+    }
 }
