@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Processing</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+
+<body>
+    <div id="ambient-detail"></div>
+
+    <header>
+        <nav class="nav-links">
+            <a href="#Differentiation">Differentiation</a>
+            <a href="#DoG">DoG</a>
+            <a href="#Sharpening">Sharpening</a>
+            <a href="#Hybrids">Hybrids</a>
+            <a href="#Stacks">Stacks</a>
+            <a href="#Blending">Blending</a>
+        </nav>
+    </header>
+
+
+    <div id="container">
+        <div id="header">
+            <h1>Image Processing</h1>
+            <p>By Jonathan Zakharov</p>
+        </div>
+
+        <div id="article">
+
+            <div class="single-image">
+                <a href="#"><img src="../images/image-processing/Blending/pipe blend.jpg" alt="Pipe Blend" height="300px"></a>
+            </div>
+
+            <h4>Introduction</h4>
+            <p>Here we explore some of the basics of image processing. We begin with the finite difference operator
+                to derive edge detection. Afterwards we look at gaussian kernels. Using convolution, we combine our
+                finite difference operator
+                with a gaussian kernel to create a DoG (Difference of Gaussian) kernel.
+                This results in a kernel which achieves more efficient edge detection. We then move to explore image
+                frequencies
+                through our discoveries with image filters. Using gaussian kernels, we extract the high
+                frequency components of an image. Being able to decompose images into their low frequencies,
+                high frequncies, and even arbitrary band filters, we learn how to sharpen images,
+                create hybrid images, and blend images using multi-resolution blending as done in
+                <a href="https://persci.mit.edu/pub_pdfs/spline83.pdf"><b>A Multiresolution Spline With Application to
+                        Image Mosaics</b> by Burt and Adelson</a> and <a
+                    href="http://olivalab.mit.edu/publications/OlivaTorralb_Hybrid_Siggraph06.pdf">Oliva's <b>Hybrid
+                        images</b></a>.
+            </p>
+
+            <h2>Fun with Filters</h2>
+            <h3 id="Differentiation">Finite Difference Operator</h3>
+            <h4>Approach</h4>
+            <p>In this section, we look at the finite difference operator to derive edge detection. The finite
+                difference
+                operators Dx and Dy will be used to compute the partial derivatives of the image with
+                respect to the x and y axis, respectively. We accomplish this by convolving the image with these
+                operators
+                using the convolve2d function from the scipy.signal library. The result is two images that
+                represent the rate of change of intensity in the horizontal and vertical directions. These derivative
+                images highlight regions in the image where significant changes in intensity occur, such as edges and
+                boundaries.</p>
+            <p>After obtaining the derivative images, we will compute the gradient magnitude image, which gives an
+                overall measure of the strength of edges at each pixel by combining the horizontal and vertical
+                gradients. This gradient magnitude image is then binarized to create a clear edge map. Binarization
+                involves choosing an appropriate threshold value that balances the trade-off between noise suppression
+                and edge preservation. This threshold is selected qualitatively by visual inspection, iteratively
+                adjusting it until an optimal balance is found. The final output will be a binary image that clearly
+                delineates the edges in the original image, highlighting significant transitions while minimizing the
+                impact of noise.</p>
+            <h4>Results</h4>
+
+            <!-- Original Image Section -->
+            <div class="single-image">
+                <a href="#original"><img src="../images/image-processing/Difference/cameraman.png" width="400px" alt="cameraman.png"></a>
+                <div class="caption">Original Image</div>
+            </div>
+
+            <!-- Render Gallery Section -->
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#horizontal_edges"><img src="../images/image-processing/Difference/Horizontal Edges.jpg" width="300px"
+                            alt="horizontal_edges.jpg"></a>
+                    <div class="caption">Horizontal Edges</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#vertical_edges"><img src="../images/image-processing/Difference/Vertical Edges.jpg" width="300px"
+                            alt="vertical_edges.jpg"></a>
+                    <div class="caption">Vertical Edges</div>
+                </div>
+            </div>
+            <p>Here we capture the difference in pixel luminance along the veritcal and horizontal axies. Computing the
+                gradient magnitude
+                of the image, we see the difference in intensity as we move horizontally and vertically across the image.
+                This gives us where the edges of objects in the image are, hence the name edge detection.
+            </p>
+            <p>The gradient magnitude can be computed using:</p>
+            <p>
+                \[
+                ||\nabla I|| = \sqrt{\left( \frac{\partial I}{\partial x} \right)^2 + \left( \frac{\partial I}{\partial
+                y} \right)^2}
+                \]
+            </p>
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#gradient_magnitude"><img src="../images/image-processing/Difference/Gradient Magnitude.jpg" width="300px"
+                            alt="gradient_magnitude.jpg"></a>
+                    <div class="caption">Gradient Magnitude</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#binary_gradient"><img src="../images/image-processing/Difference/Binary Gradient.jpg" width="300px"
+                            alt="binary_gradient.jpg"></a>
+                    <div class="caption">Binarized Gradient</div>
+                </div>
+            </div>
+
+
+            <!-- Section for Derivative of Gaussian Filter -->
+            <h3 id="DoG">Derivative of Gaussian Filter</h3>
+            <h4>Approach</h4>
+            <p>Building on the finite difference method, we introduce the Derivative of Gaussian (DoG)
+                filter, which combines the noise-reducing properties of Gaussian smoothing with the edge-detection
+                capabilities of the finite difference operator. The process begins by applying a Gaussian filter to the
+                image, which effectively blurs it, reducing the high-frequency noise that can interfere with edge
+                detection. The smoothed image is then processed in the same way as before—by computing its x and y
+                derivatives using the finite difference operators Dx and Dy. This approach produces a
+                cleaner edge map with less noise compared to the simple finite difference method.</p>
+            <p>However we can do this more efficiently thanks to the power of convolution. Rather than doing two passes,
+                low-passing and differentiating, we can generate DoG filters by directly convolving the Gaussian filter
+                with
+                the finite difference operators Dx and Dy. This results in a single convolution operation
+                that achieves the same outcome as applying the Gaussian filter followed by the finite difference
+                operator. Both methods result in equivalent results thanks to properties of convolution.</p>
+            <h4>Results</h4>
+
+            <p>Here is a visualization of what our kernels look like:</p>
+            <div class="single-image">
+                <a href="#"><img src="../images/image-processing/DoG/Gaussian Kernel.png" width="200px" alt="Gaussian Kernel.png"></a>
+                <div class="caption">Gaussian Kernel</div>
+            </div>
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/DoG/Finite Difference Kernel Horizontal.png"
+                            alt="finite_difference_horizontal.jpg"></a>
+                    <div class="caption">Finite Difference Kernel (Dx)</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/DoG/Finite Difference Kernel Vertical.png"
+                            alt="finite_difference_vertical.jpg"></a>
+                    <div class="caption">Finite Difference Kernel (Dy)</div>
+                </div>
+            </div>
+            <p>We begin by taking our lovely Gaussian kernel and existing finite difference operators to create a DoG
+                kernel. This is done by convolving the kernel with the finite difference operators, resulting in a
+                single convolution operation that combines the Gaussian filter with the finite difference operator. The
+                resulting DoG kernel is then applied to the original image to obtain the derivative images.</p>
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/DoG/DoG Kernel Horizontal.png" alt="dog_kernel_horizontal.jpg"></a>
+                    <div class="caption">DoG Kernel Horizontal</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/DoG/DoG Kernel Vertical.png" alt="dog_kernel_vertical.jpg"></a>
+                    <div class="caption">DoG Kernel Vertical</div>
+                </div>
+            </div>
+            <p>After concolving our finite difference kernel with a our gaussian kernel, we are able to convolve our
+                cameraman image
+                in a single pass and see that the blur from the gaussian kernel has removed the high frequency
+                components of the
+                image, elimiating that pesky noise. The result is cleaner edge detection.
+                Notice that both methods, smoothing then differentiating and convolving directly with DoG
+                produce equivalent results.
+            </p>
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/DoG/DoG Binary Gradient.jpg" alt="dog_binary_gradient.jpg"></a>
+                    <div class="caption">DoG Binary Gradient</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/DoG/Smoothed Binary Gradient.jpg"
+                            alt="smoothed_binary_gradient.jpg"></a>
+                    <div class="caption">Smoothed Binary Gradient</div>
+                </div>
+            </div>
+
+
+            <h2>Fun with Frequencies</h2>
+
+            <h3 id="Sharpening">Image Sharpening</h3>
+            <h4>Approach</h4>
+            <p>Image sharpening is an image processing technique that brings out the clarity and detail of
+                an image by emphasizing their high-frequency components. The process begins by filtering out the low
+                frequencies
+                of an image using a Gaussian filter. The high-frequency details of the image are then isolated by
+                subtracting
+                the low-frequency data from the original image. By adding these high frequencies back into the original
+                image, we
+                emphasize the high-frequency components, making edges and fine details more prominent.</p>
+            <p>By increasing the size and sigma of the Gaussian Kernel, we can filter out a greater portion of the
+                high-frequency data, resulting in the isolation of more high-frequency components after the subtraction.
+                This allows us to control the amount of sharpening applied to the image.
+            </p>
+
+            <h4>Results</h4>
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Sharpening/Taj Original.jpg"></a>
+                    <div class="caption">Taj Mahal</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Sharpening/Taj High Frequency.jpg"></a>
+                    <div class="caption">High-Frequency Components of Taj Mahal</div>
+                </div>
+            </div>
+            <p>By computing the high frequency component of the image and adding them back to the original image,
+                we are able to enhance the sharpness of the image.</p>
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Sharpening/Taj Sigma 1.jpg" width="300px"></a>
+                    <div class="caption">\[\sigma = 1.0\]</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Sharpening/Taj Sigma 2.jpg" width="300px"></a>
+                    <div class="caption">\[\sigma = 2.0\]</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Sharpening/Taj Sigma 3.jpg" width="300px"></a>
+                    <div class="caption">\[\sigma = 3.0\]</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Sharpening/Taj Sigma 4.jpg" width="300px"></a>
+                    <div class="caption">\[\sigma = 4.0\]</div>
+                </div>
+            </div>
+
+            <p>Here we find some interesting results:</p>
+
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Sharpening/knife.png" height="300px"></a>
+                    <div class="caption">Knife</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Sharpening/knife sharpened.png" height="300px"></a>
+                    <div class="caption">Sharpened Knife</div>
+                </div>
+            </div>
+
+            <p>We also find that recursively sharpening an image makes it deep fried.</p>
+
+            <div class="single-image">
+                <a href="#"><img src="../images/image-processing/Sharpening/Taj Deep Fried.jpg"></a>
+                <div class="caption">Deep Fried Taj Mahal</div>
+            </div>
+
+            <h3 id="Hybrids">Hybrid Images</h3>
+            <h4>Approach</h4>
+            <p><a href="http://olivalab.mit.edu/publications/OlivaTorralb_Hybrid_Siggraph06.pdf"><b>Hybrid
+                        images</b></a>
+                are an interesting visual phenomenon where different interpretations of an image emerge
+                depending on the viewing distance. The goal of this section is to create such hybrid images as described
+                in Oliva 2006,
+                by combining the high-frequency details of one image with the low-frequency content of another.
+            </p>
+            <p>
+                We begin by picking two images that we want to merge. Before working with any filters,
+                it is important that the images are visually aligned, as misalignment can disrupt the intended
+                perception
+                of the hybrid image. Once aligned however, we extract the low-frequencies one image and the high
+                frequencies of the other.
+                This is done using a Gaussian Kernel and the methodology described above. These filtered images are then
+                combined, typically by adding or averaging them, to produce the final
+                hybrid image.
+            </p>
+
+            <h4>Results</h4>
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Hybrid/DerekPicture.jpg" height="300px"></a>
+                    <div class="caption">Derek</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Hybrid/nutmeg.jpg" width="300px"></a>
+                    <div class="caption">Nutmeg</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Hybrid/low freq.png" height="300px"></a>
+                    <div class="caption">Low-Frequency Components</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Hybrid/high freq.png" height="300px"></a>
+                    <div class="caption">High-Frequency Components</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Hybrid/hybrid.png" height="400px"></a>
+                    <div class="caption">Hybrid Derek and Nutmeg</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Hybrid/Derek-Netmug FT.png" height="400px"></a>
+                    <div class="caption">Frequency Domain of Derek and Nutmeg</div>
+                </div>
+            </div>
+            <p>Here we select Nutmeg's low frequencies and combine them with the high frequencies of Derek's image.
+                The results in a neat hybrid image which upclose looks like Nutmeg and far away looks like Derek.</p>
+
+            <div class="single-image">
+                <a href="#"><img src="../images/image-processing/Hybrid/terror.png" height="300px"></a>
+                <div class="caption">Scary</div>
+            </div>
+            <p>Swapping the frequencies we choose for Derek and Nutmeg, we get an uncanny result. </p>
+
+            <p>Here we experiement with some different images: </p>
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Hybrid/Mother Rat.png" width="150px"></a>
+                    <div class="caption">Rat</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Hybrid/pipe.jpg" width="300px"></a>
+                    <div class="caption">Garfield</div>
+                </div>
+            </div>
+
+            <div class="single-image">
+                <a href="#"><img src="../images/image-processing/Hybrid/failure.png" width="300px"></a>
+                <div class="caption">Failed Hybrid</div>
+            </div>
+
+            <p>The choice of cutoff frequencies for the filters requires experimentation
+                to achieve the desired effect. Here, the pixel art rat lacks alot of high frequency data
+                and when pairing it with the low frequency data from
+                the pipe strip, we get a strong visual clash of the different frequencies.</p>
+
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Hybrid/hybrid rat.png" width="300px"></a>
+                    <div class="caption">Garfield Rat Hybrid</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Hybrid/Rat-Pipi FT.png" width="300px"></a>
+                    <div class="caption">Fourier Transform of Hybrid Rat and Pipe</div>
+                </div>
+            </div>
+            <p>Swapping the frequencies however results in a better looking image. It is interesting to observe how the
+                pixel art of the rat is reflected in the frequency domain.</p>
+
+            <p>Here is me one upping Derek and Nutmeg.</p>
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Hybrid/siri.jpg" height="300px"></a>
+                    <div class="caption">Sirius</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Hybrid/good_me.jpg" width="300px"></a>
+                    <div class="caption">Me</div>
+                </div>
+            </div>
+            <div class="single-image">
+                <a href="#"><img src="../images/image-processing/Hybrid/sir.png" width="500px"></a>
+                <div class="caption">Me and Sirius</div>
+            </div>
+
+
+            <h2>Implementing A Multi-resolution Spline With Application to Image Mosaics</h2>
+
+            <h3 id="Stacks">Gaussian and Laplacian Stacks</h3>
+
+            <h4>Approach</h4>
+            <p>In this section, we explore Gaussian and Laplacian stacks, they key to Burt and Adelson's 1984 paper. 
+                Firstly, unlike pyramids, where each level is downsampled, stacks keep a fixed resolution.
+                Now then, to create a Gaussian stack, we simply take an input image and recursively convolve it with
+                a Gaussian Kernel, continually saving each convolution result to the corresponding level of the image stack. 
+                The Laplacian stack is then derived by subtracting each level of the Gaussian stack from the level above it,
+                effectively isolating the band-pass information at each level.</p>
+
+            <h4>Results</h4>
+
+            <p>We begin with the follwing images:</p>
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Stacks/apple.jpeg" alt="Apple"></a>
+                    <div class="caption">Apple</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Stacks/orange.jpeg" alt="Orange"></a>
+                    <div class="caption">Orange</div>
+                </div>
+            </div>
+
+            <h5>Gaussian Stack</h5>
+            <p>Now we compute the Gaussian stacks of the apple and orange. 
+                With each level in the stack, we apply an additional low-pass filter.</p>
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Stacks/Apple Gaussian_0.jpg" alt="Apple Gaussian Level 0"></a>
+                    <div class="caption">Apple Gaussian Level 0</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Stacks/Orange Gaussian_0.jpg" alt="Orange Gaussian Level 0"></a>
+                    <div class="caption">Orange Gaussian Level 0</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Stacks/Apple Gaussian_2.jpg" alt="Apple Gaussian Level 2"></a>
+                    <div class="caption">Apple Gaussian Level 2</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Stacks/Orange Gaussian_2.jpg" alt="Orange Gaussian Level 2"></a>
+                    <div class="caption">Orange Gaussian Level 2</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Stacks/Apple Gaussian_4.jpg" alt="Apple Gaussian Level 4"></a>
+                    <div class="caption">Apple Gaussian Level 4</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Stacks/Orange Gaussian_4.jpg" alt="Orange Gaussian Level 4"></a>
+                    <div class="caption">Orange Gaussian Level 4</div>
+                </div>
+            </div>
+
+            <h5>Laplacian Stack</h5>
+
+            <p>Here we visualize the gaussian stacks of the apple and orange. With each layer, we subtract the (i)th
+                layer from the (i+1)th layer of the gaussian stack.</p>
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Stacks/Apple Laplacian_0.jpg" alt="Apple Laplacian Level 0"></a>
+                    <div class="caption">Apple Laplacian Level 0</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Stacks/Orange Laplacian_0.jpg" alt="Orange Laplacian Level 0"></a>
+                    <div class="caption">Orange Laplacian Level 0</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Stacks/Apple Laplacian_2.jpg" alt="Apple Laplacian Level 2"></a>
+                    <div class="caption">Apple Laplacian Level 2</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Stacks/Orange Laplacian_2.jpg" alt="Orange Laplacian Level 2"></a>
+                    <div class="caption">Orange Laplacian Level 2</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Stacks/Apple Laplacian_4.jpg" alt="Apple Laplacian Level 4"></a>
+                    <div class="caption">Apple Laplacian Level 4</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Stacks/Orange Laplacian_4.jpg" alt="Orange Laplacian Level 4"></a>
+                    <div class="caption">Orange Laplacian Level 4</div>
+                </div>
+            </div>
+
+            <h3 id="Blending">Multi-resolution Blending</h3>
+
+            <h4>Approach</h4>
+
+            <p>
+                In this section, we implement <a href="https://persci.mit.edu/pub_pdfs/spline83.pdf">
+                    <b>A Multiresolution Spline With Application to Image Mosaics</b> by Burt and Adelson</a>.
+            
+                The final part of the project focuses on multi-resolution blending, a technique that allows for the
+                seamless integration of two images. Unlike traditional image blending methods, multi-resolution blending works by
+                smoothing the transition between images at different frequency levels, designed to make the seam between images almost imperceptible.
+            </p>
+            <p>
+                We begin by taking two input images and a mask image. We compute the Laplacian stacks of the two images
+                in addition to the Gaussian stack of the mask image. We then multiply the corresponding layers of the Laplacian stacks with the mask, 
+                resulting in two masked stacks. Finally, we collapse and sum together the stacks of masked images for our multiresolution blended image.
+            </p>
+
+            <h4>Results</h4>
+
+            <h5>Masked Stacks</h5>
+            <p>Taking the Laplacian stacks of the apple and orange, creating a gaussian stack of a step function as a
+                mask,
+                and multiplying the corresponding layers of the Laplacian stacks with the step function mask, we get the
+                masked stacks.</p>
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/apple.jpeg" alt="Apple"></a>
+                    <div class="caption">Apple</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/orange.jpeg" alt="Orange"></a>
+                    <div class="caption">Orange</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/Masked L2_0.jpg" alt="Masked Apple Level 0"></a>
+                    <div class="caption">Masked Apple Level 0</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/Masked L1_0.jpg" alt="Masked Orange Level 0"></a>
+                    <div class="caption">Masked Orange Level 0</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/Masked L2_2.jpg" alt="Masked Apple Level 2"></a>
+                    <div class="caption">Masked Apple Level 2</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/Masked L1_2.jpg" alt="Masked Orange Level 2"></a>
+                    <div class="caption">Masked Orange Level 2</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/Masked L2_4.jpg" alt="Masked Apple Level 4"></a>
+                    <div class="caption">Masked Apple Level 4</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/Masked L1_4.jpg" alt="Masked Orange Level 4"></a>
+                    <div class="caption">Masked Orange Level 4</div>
+                </div>
+            </div>
+
+            <p>Collapsing the masked stacks, we get the masked apple and the masked orange. Adding these two together,
+                we get the coveted "Oraple".</p>
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/masked_orange.jpg" alt="Masked Orange"></a>
+                    <div class="caption">Masked Orange</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/masked_apple.jpg" alt="Masked Apple"></a>
+                    <div class="caption">Masked Apple</div>
+                </div>
+            </div>
+
+            <div class="single-image">
+                <a href="#"><img src="../images/image-processing/Blending/blended_apple.jpg" alt="Blended Apple"></a>
+                <div class="caption">"Oraple"</div>
+            </div>
+
+            <h5>Fun Blends</h5>
+
+            <div class="render-gallery">
+
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/cat.jpg" alt="Cat" height="300px"></a>
+                    <div class="caption">Grace</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/beach.jpg" alt="Beach" height="300px"></a>
+                    <div class="caption">Beach</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/cat_mask.png" alt="Cat Mask" height="300px"></a>
+                    <div class="caption">Grace Mask</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/grace blend.jpg" alt="Cat Blend" height="300px"></a>
+                    <div class="caption">Grace at the Beach</div>
+                </div>
+
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/me.png" alt="Me" width="500px"></a>
+                    <div class="caption">Me</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/cropped_squash.png" alt="Cropped Squash" width="500px"></a>
+                    <div class="caption">A Squash I Grew</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/me_mask.png" alt="Me Mask" width="500px"></a>
+                    <div class="caption">Me Mask</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/me blend.png" alt="Me Blend" width="500px"></a>
+                    <div class="caption">Vegetal</div>
+                </div>
+
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/pikmin3_SD.png" alt="Pikmin 3 SD" width="500px"></a>
+                    <div class="caption">Pikmin</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/cc.jpg" alt="CC" width="500px"></a>
+                    <div class="caption">Colin and Chloe</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/pikmin3_mask_SD.png" alt="Pikmin 3 SD Mask" width="500px"></a>
+                    <div class="caption">Pikmin Mask</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#"><img src="../images/image-processing/Blending/pikmin blend.png" alt="Pikmin Blend" width="500px"></a>
+                    <div class="caption">Pikmin in irl?!?!</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+
+</html>

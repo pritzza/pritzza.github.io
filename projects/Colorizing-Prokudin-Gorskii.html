@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colorizing the Prokudin-Gorskii Photo Collection</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+
+<body>
+    <div id="ambient-detail"></div>
+
+    <header>
+        <nav class="nav-links">
+            <a href="#introduction">Introduction</a>
+            <a href="#algorithm">Algorithm</a>
+            <a href="#results">Results</a>
+            <a href="#conclusion">Conclusion</a>
+        </nav>
+    </header>
+
+    <div id="container">
+        <div id="header">
+            <h1>Colorizing the Prokudin-Gorskii Photo Collection</h1>
+            <p>By Jonathan Zakharov</p>
+        </div>
+
+        <div id="article">
+            <h2 id="introduction">Introduction</h2>
+            <p>
+                Sergei Mikhailovich Prokudin-Gorskii (1863-1944) [Сергей Михайлович Прокудин-Горский, to his Russian
+                friends] was a man well ahead of his time. Convinced, as early as 1907, that color photography was the
+                wave of the future, he won Tzar's special permission to travel across the vast Russian Empire and take
+                color photographs of everything he saw including the only color portrait of Leo Tolstoy. And he really
+                photographed everything: people, buildings, landscapes, railroads, bridges... thousands of color
+                pictures! His idea was simple: record three exposures of every scene onto a glass plate using a red, a
+                green, and a blue filter. Never mind that there was no way to print color photographs until much later
+                -- he envisioned special projectors to be installed in "multimedia" classrooms all across Russia where
+                the children would be able to learn about their vast country. Alas, his plans never materialized: he
+                left Russia in 1918, right after the revolution, never to return again. Luckily, his RGB glass plate
+                negatives, capturing the last years of the Russian Empire, survived and were purchased in 1948 by the
+                Library of Congress. The LoC has recently digitized the negatives and made them available on-line.
+            </p>
+            <p>
+                The goal of this project is to restore these historic images by digitally aligning and combining the
+                color channels. This report outlines the algorithm and techniques used for aligning and colorizing the
+                images, presenting the results of these methods to some of the images in the Prokudin-Gorskii
+                collection.
+            </p>
+
+            <h2 id="algorithm">Algorithm</h2>
+            <p>
+                The process of colorizing the Prokudin-Gorskii images involves several distinct steps. Each step is
+                designed to algorithmically guarantee the proper construction of each colored image. The greatest
+                challenge is taking into account the slight offset spatially, angularly, and temporally between photos,
+                creating the need to align the three separate channels to create a cohesive colored image. To address
+                this, our algorithm goes as follows:
+            </p>
+
+            <ul>
+                <li>
+                    <b>
+                        Splitting the Image into Channels:
+                    </b>
+                    The original digitized photographs consist of three vertically stacked black-and-white images. From
+                    top to bottom, these correspond to the blue, green, and red color channels. The first step is to
+                    split the image into its constituent parts.
+                </li>
+                <li>
+                    <b>
+                        Aligning the Channels:
+                    </b>
+                    Since the photos were taken sequentially, small shifts due to camera movement or changes in the
+                    environment are common. Successful alignment requires identifying the best spatial offset between
+                    the channels to minimize visual artifacts and create a seamless color image.
+                </li>
+                <li>
+                    <b>
+                        Combining the Channels:
+                    </b>
+                    Once the channels are aligned, the final step is to merge them into a single color image using the
+                    three color channels to construct the full-color photograph.
+                </li>
+            </ul>
+
+            <h3>Step 1: Image Splitting</h3>
+            <p>
+                The raw image is split into its three channels: blue, green, and red (from top to bottom). Since each
+                channel occupies one-third of the image height, given the image dimensions are
+                \( H \times W \), we can easily divide the sections:
+            </p>
+            <p>
+                \[
+                I_B = I[0 : \frac{H}{3}], \quad I_G = I[\frac{H}{3} : \frac{2H}{3}], \quad I_R = I[\frac{2H}{3} : H]
+                \]
+            </p>
+
+            <h3>Step 2: Alignment Using Pyramid</h3>
+            <p>
+                Images which are too large to be directly compared must be downscaled. The downscaled versions of the
+                images are aligned first then at higher resolutions. Starting at the lowest resolution and iteratively
+                refines the offset at each level. It is based on minimizing the L2 distance between the edge maps of the
+                fixed and aligning images, computed using the Sobel filter. The error for a given offset
+                The error for a given offset \( (\Delta x, \Delta y) \) is:
+            </p>
+            <p>
+                \[
+                Error = L_2(M_{\text{fixed}},\ \text{shift}(M_{\text{aligning}}, \Delta x, \Delta y))
+                \]
+            </p>
+            <p>
+                The L2 loss (or L2 error) between two images \( I_1 \) and \( I_2 \) is given by:
+            </p>
+            <p>
+                \[
+                L_2(I_1,\ I_2) = \sqrt{\sum_{x, y} \left( I_1(x, y) - I_2(x, y) \right)^2}
+                \]
+            </p>
+            <p>
+                Here, \( I_1(x, y) \) and \( I_2(x, y) \) represent the pixel values at position \( (x, y) \) in the two
+                images.
+            </p>
+
+            <h3>Step 3: Image Combination</h3>
+            <p>
+                After alignment, the channels are stacked to form the final color image:
+            </p>
+            <p>
+                \[
+                I_{\text{Colored}} = \left[ I_{Shifted\ R}, \, I_{Shifted\ G}, \, I_B \right]
+                \]
+            </p>
+
+            <h2 id="results">Results</h2>
+            <p>
+                We tested our algorithm on a selection of images from the Prokudin-Gorskii collection. Below are some
+                examples of the restored images, showcasing the effectiveness of our approach in bringing these
+                black-and-white photographs to life in color:
+            </p>
+
+            Colorizing-Prokudin-Gorskii
+            <div class="single-image">
+                <a href="#cathedral"><img src="../images/colorizing-prokudin-gorskii/cathedral.jpg" width="500px" alt="cathedral.jpg"></a>
+                <div class="caption">cathedral.jpg<br>red offset (3, 12)<br>green offset (2, 5)</div>
+            </div>
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <a href="#tobolsk"><img src="../images/colorizing-prokudin-gorskii/tobolsk.jpg" alt="tobolsk.jpg"></a>
+                    <div class="caption">tobolsk.jpg<br>red offset (3, 7)<br>green offset (3, 3)</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#monastery"><img src="../images/colorizing-prokudin-gorskii/monastery.jpg" alt="monastery.jpg"></a>
+                    <div class="caption">monastery.jpg<br>red offset (2, 3)<br>green offset (2, -3)</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#icon"><img src="../images/colorizing-prokudin-gorskii/icon.tif" alt="icon.tif"></a>
+                    <div class="caption">icon.tif<br>red offset (23, 90)<br>green offset (17, 41)</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#lady"><img src="../images/colorizing-prokudin-gorskii/lady.tif" alt="lady.tif"></a>
+                    <div class="caption">lady.tif<br>red offset (13, 115)<br>green offset (9, 55)</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#melons"><img src="../images/colorizing-prokudin-gorskii/melons.tif" alt="melons.tif"></a>
+                    <div class="caption">melons.tif<br>red offset (13, 177)<br>green offset (11, 81)</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#train"><img src="../images/colorizing-prokudin-gorskii/train.tif" alt="train.tif"></a>
+                    <div class="caption">train.tif<br>red offset (33, 86)<br>green offset (8, 43)</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#castle"><img src="../images/colorizing-prokudin-gorskii/castle.tif" alt="castle.tif"></a>
+                    <div class="caption">castle.tif<br>red offset (4, 98)<br>green offset (3, 34)</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#harvesters"><img src="../images/colorizing-prokudin-gorskii/harvesters.tif" alt="harvesters.tif"></a>
+                    <div class="caption">harvesters.tif<br>red offset (14, 123)<br>green offset (18, 60)</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#onion_church"><img src="../images/colorizing-prokudin-gorskii/onion_church.tif" alt="onion_church.tif"></a>
+                    <div class="caption">onion_church.tif<br>red offset (37, 109)<br>green offset (27, 51)</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#self_portrait"><img src="../images/colorizing-prokudin-gorskii/self_portrait.tif" alt="self_portrait.tif"></a>
+                    <div class="caption">self_portrait.tif<br>red offset (37, 175)<br>green offset (29, 78)</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#three_generations"><img src="../images/colorizing-prokudin-gorskii/three_generations.tif"
+                            alt="three_generations.tif"></a>
+                    <div class="caption">three_generations.tif<br>red offset (10, 112)<br>green offset (13, 53)</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#workshop"><img src="../images/colorizing-prokudin-gorskii/workshop.tif" alt="workshop.tif"></a>
+                    <div class="caption">workshop.tif<br>red offset (-12, 106)<br>green offset (-1, 53)</div>
+                </div>
+            </div>
+
+            <div class="single-image">
+                <a href="#emir"><img src="../images/colorizing-prokudin-gorskii/emir.tif" width="500px" alt="emir.tif"></a>
+                <div class="caption">emir.tif<br>red offset (40, 107)<br>green offset (24, 49)</div>
+            </div>
+
+            <p>
+                Here's some more cool images from the collection:
+            </p>
+            <div class="render-gallery">
+
+                <div class="render-gallery-item">
+                    <a href="#dagestan"><img src="../images/colorizing-prokudin-gorskii/dagestan.tif" alt="dagestan.tif"></a>
+                    <div class="caption">dagestan.tif<br>red offset (21, 154)<br>green offset (12, 40)</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#lilies"><img src="../images/colorizing-prokudin-gorskii/lilies.tif" alt="lilies.tif"></a>
+                    <div class="caption">lilies.tif<br>red offset (-29, 118)<br>green offset (-6, 48)</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#road"><img src="../images/colorizing-prokudin-gorskii/road.tif" alt="road.tif"></a>
+                    <div class="caption">road.tif<br>red offset (-33, 170)<br>green offset (-10, 81)</div>
+                </div>
+                <div class="render-gallery-item">
+                    <a href="#creek"><img src="../images/colorizing-prokudin-gorskii/creek.tif" alt="creek.tif"></a>
+                    <div class="caption">creek.tif<br>red offset (77, 107)<br>green offset (67, 68)</div>
+                </div>
+            </div>
+
+            <!-- Lightbox Modal sections -->
+            <div id="tobolsk" class="lightbox">
+                <a href="#"><img src="../images/colorizing-prokudin-gorskii/tobolsk.jpg" alt="tobolsk.jpg"></a>
+            </div>
+
+            <div id="monastery" class="lightbox">
+                <a href="#"><img src="../images/colorizing-prokudin-gorskii/monastery.jpg" alt="monastery.jpg"></a>
+            </div>
+
+            <div id="cathedral" class="lightbox">
+                <a href="#"><img src="../images/colorizing-prokudin-gorskii/cathedral.jpg" alt="cathedral.jpg"></a>
+            </div>
+
+            <div id="icon" class="lightbox">
+                <a href="#"><img src="../images/colorizing-prokudin-gorskii/icon.tif" alt="icon.tif"></a>
+            </div>
+
+            <div id="lady" class="lightbox">
+                <a href="#"><img src="../images/colorizing-prokudin-gorskii/lady.tif" alt="lady.tif"></a>
+            </div>
+
+            <div id="melons" class="lightbox">
+                <a href="#"><img src="../images/colorizing-prokudin-gorskii/melons.tif" alt="melons.tif"></a>
+            </div>
+
+            <div id="train" class="lightbox">
+                <a href="#"><img src="../images/colorizing-prokudin-gorskii/train.tif" alt="train.tif"></a>
+            </div>
+
+            <div id="castle" class="lightbox">
+                <a href="#"><img src="../images/colorizing-prokudin-gorskii/castle.tif" alt="castle.tif"></a>
+            </div>
+
+            <div id="harvesters" class="lightbox">
+                <a href="#"><img src="../images/colorizing-prokudin-gorskii/harvesters.tif" alt="harvesters.tif"></a>
+            </div>
+
+            <div id="onion_church" class="lightbox">
+                <a href="#"><img src="../images/colorizing-prokudin-gorskii/onion_church.tif" alt="onion_church.tif"></a>
+            </div>
+
+            <div id="self_portrait" class="lightbox">
+                <a href="#"><img src="../images/colorizing-prokudin-gorskii/self_portrait.tif" alt="self_portrait.tif"></a>
+            </div>
+
+            <div id="three_generations" class="lightbox">
+                <a href="#"><img src="../images/colorizing-prokudin-gorskii/three_generations.tif" alt="three_generations.tif"></a>
+            </div>
+
+            <div id="workshop" class="lightbox">
+                <a href="#"><img src="../images/colorizing-prokudin-gorskii/workshop.tif" alt="workshop.tif"></a>
+            </div>
+
+            <div id="emir" class="lightbox">
+                <a href="#"><img src="../images/colorizing-prokudin-gorskii/emir.tif" alt="emir.tif"></a>
+            </div>
+
+            <div id="dagestan" class="lightbox">
+                <a href="#"><img src="../images/colorizing-prokudin-gorskii/dagestan.tif" alt="dagestan.tif"></a>
+            </div>
+
+            <div id="lilies" class="lightbox">
+                <a href="#"><img src="../images/colorizing-prokudin-gorskii/lilies.tif" alt="lilies.tif"></a>
+            </div>
+
+            <div id="road" class="lightbox">
+                <a href="#"><img src="../images/colorizing-prokudin-gorskii/road.tif" alt="road.tif"></a>
+            </div>
+
+            <div id="creek" class="lightbox">
+                <a href="#"><img src="../images/colorizing-prokudin-gorskii/creek.tif" alt="creek.tif"></a>
+            </div>
+
+
+            <h2 id="conclusion">Conclusion</h2>
+            <p>
+                The colorization of the Prokudin-Gorskii photo collection provides a unique opportunity to revisit early
+                20th-century Russia in color. Through the use of image processing techniques, such as pyramid alignment
+                and edge-based matching, the original black-and-white negatives have been transformed into vivid and
+                historically significant color photographs. Nonetheless, this project successfully showcases how modern
+                technology can resurrect the lost colors of a bygone era.
+            </p>
+
+        </div>
+    </div>
+
+</body>
+
+</html>
