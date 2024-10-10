@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Morphing</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+
+<body>
+    <div id="ambient-detail"></div>
+
+    <header>
+        <nav class="nav-links">
+            <a href="#Correspondences">Correspondences</a>
+            <a href="#Mid-Way">Mid-Way</a>
+            <a href="#Morph">Morph</a>
+            <a href="#Mean">"Mean face"</a>
+            <a href="#Caricatures">Caricatures</a>
+            <a href="#Extras">Extras</a>
+        </nav>
+    </header>
+
+    <div id="container">
+        <div id="header">
+            <h1>Face Morphing</h1>
+            <p>By Jonathan Zakharov</p>
+        </div>
+
+        <div id="article">
+            <div class="single-image">
+                <a href="#"><img src="../images/face-morphing/3/noa_wolf_morph.gif" alt="Face Morph Sequence" height="300px"></a>
+            </div>
+
+            <h2>Introduction</h2>
+            <p>
+                This project explores the fascinating world of face morphing, a technique that allows for smooth transitions between two facial images. We'll delve into the process of defining facial keypoints, creating triangulation meshes, implementing affine warps, and generating morph sequences. Additionally, we'll compute mean faces from a population and create caricatures through extrapolation.
+            </p>
+
+            <h2 id="Correspondences">Defining Correspondences</h2>
+            <h3>Implementation</h3>
+            <p>
+                To implement face morphing, we need to warp the geometry of a face. This is achieved by tessellating the images, i.e., breaking them into triangles, which can then be deformed using affine transformations. To generate these triangles, we first define the key points of each face. This is done via a Python GUI tool I made which allows me to manually select/move around feature points on an image, which are then saved to disk.
+            </p>
+            <p>
+                Once the feature points are obtained, we use them to connect the points into triangles covering the entire image. This process is known as triangulation. While there are several methods for triangulation, for our purposes, we want to maximize the area of each triangle. This is efficiently done using Delaunay Triangulation. Fortunately, the algorithm is abstracted away into a single line of python code for us:
+            </p>
+            <pre><code>
+from scipy.spatial import Delaunay
+triangulation = Delaunay(avg_shape).simplices
+            </code></pre>
+            <p>
+                Here, <code>avg_shape</code> represents the average coordinates of the key points from both images, which are then passed into the Delaunay algorithm to generate the triangular mesh.
+            </p>
+            
+            <h3>Results</h3>
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/1/noa.jpg" alt="Image A" width="300px">
+                    <p class="caption">Original Image A</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/1/wolf.jpg" alt="Image B" width="300px">
+                    <p class="caption">Original Image B</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/1/noa_points.png" alt="Image A with Points" width="300px">
+                    <p class="caption">Image A with Keypoints</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/1/wolf_points.png" alt="Image B with Points" width="300px">
+                    <p class="caption">Image B with Keypoints</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/1/noa_lines.png" alt="Triangulation on Image A" width="300px">
+                    <p class="caption">Triangulation on Image A</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/1/wolf_lines.png" alt="Triangulation on Image B" width="300px">
+                    <p class="caption">Triangulation on Image B</p>
+                </div>
+            </div>
+
+            <h2 id="Mid-Way">Computing the "Mid-way Face"</h2>
+            <h3>Implementation</h3>
+            <p>
+                Given two sets of corresponding feature points and the Delaunay triangulation based on their average, we can compute the affine transformations needed to map the triangles from one face to another. For each triangle in the average shape, we calculate the affine transformation matrices that map the triangles from both images to the common shape.
+            </p>
+            <p>
+                Once these affine transformations are computed, we perform inverse warping to map the pixel values from the original images to the average shape. For each pixel in the target (mid-way) triangle, we trace it back to its corresponding locations in the source images and retrieve the pixel values. To generate the mid-way face, we cross-dissolve the images by taking the weighted average of the pixel intensities from both source images:
+            </p>
+            <p>
+                <mathjax>$$ I_{\text{mid}}(x, y) = \frac{I_A(x, y) + I_B(x, y)}{2} $$</mathjax>
+            </p>
+            <p>
+                where <mathjax>$I_A(x, y)$</mathjax> and <mathjax>$I_B(x, y)$</mathjax> represent the pixel values of the two source images at position <mathjax>$(x, y)$</mathjax>.
+            </p>
+
+            <h3>Results</h3>
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/2/0.jpg" alt="Original Image A" width="100%">
+                    <p class="caption">Original Image A</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/2/1.jpg" alt="Mid-way Face" width="100%">
+                    <p class="caption">Mid-way Face</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/2/2.jpg" alt="Original Image B" width="100%">
+                    <p class="caption">Original Image B</p>
+                </div>
+            </div>
+
+
+            <h2 id="Morph">The Morph Sequence</h2>
+            <h3>Implementation</h3>
+            <p>
+                In the morph sequence, instead of just averaging the points and pixels as in the mid-way face, we apply a more fine-grained interpolation. By using linear interpolation for both the key points and pixel values, we can smoothly transition from one face to another.
+            </p>
+            <p>
+                Let \( \alpha \in [0, 1] \) be the interpolation parameter that controls the morphing sequence. For each value of \( \alpha \), we compute the intermediate shape by linearly interpolating between the points of the two faces:
+            </p>
+            <p>
+                <mathjax>$$ P_{\text{morph}}(\alpha) = (1 - \alpha) P_A + \alpha P_B $$</mathjax>
+            </p>
+            <p>
+                Next, we warp both faces into this intermediate shape using the same affine transformation process described earlier. After warping, we blend the pixel intensities using:
+            </p>
+            <p>
+                <mathjax>$$ I_{\text{morph}}(\alpha) = (1 - \alpha) I_A + \alpha I_B $$</mathjax>
+            </p>
+
+            <h3>Results</h3>
+            <p>
+                The full morph sequence can be viewed in the following animated GIF:
+            </p>
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/3/noa_morph.gif" alt="Noa Morph Sequence" width="100%">
+                    <p class="caption">Image A Warping (No Blending)</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/3/noa_wolf_morph.gif" alt="Noa to Wolf Morph Sequence" width="100%">
+                    <p class="caption">Warping and Blending</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/3/wolf_morph.gif" alt="Wolf Morph Sequence" width="100%">
+                    <p class="caption">Image B Warping (No Blending)</p>
+                </div>
+            </div>
+
+            <h2 id="Mean">The "Mean face" of a population</h2>
+            <h3>Implementation</h3>
+            <p>
+                We can extend the technique beyond two images by working with a larger dataset of faces. By collecting a dataset of facial images and defining feature points in a standardized way, we can perform a statistical analysis to compute the "mean face" of a population. 
+            </p>
+            <p> 
+                Here we used the <a href="https://fei.edu.br/~cet/facedatabase.html">FEI Face Database</a>, Brazilian face database that contains a set of face 200 images taken at the Artificial Intelligence Laboratory of FEI in São Bernardo do Campo, São Paulo, Brazil. 
+                Of each subject, there exists 2 photos of them, one which is smiling, and one which is not smiling.
+            </p>
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/4/1b.jpg" alt="Smiling" width="200px">
+                    <p class="caption">FEI Face Database Smiling Example</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/4/1a.jpg" alt="Not Smiling" width="200px">
+                    <p class="caption">FEI Face Database Not Smiling Example</p>
+                </div>
+            </div>
+
+            <p>
+                First, we gather the feature points of all faces and compute their average to obtain an “average face shape.” Then, we warp the geometry of each individual face to this average face shape using affine transformations. Finally, by averaging the pixel values of all these warped images, we produce the mean face of the population. This approach can be generalized to any group or set of images.
+            </p>
+
+            <h3>Results</h3>
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/4/average_face_br_happy.jpg" alt="My Face" width="200px">
+                    <p class="caption">Average Smiling Face</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/4/average_face_br_sad.jpg" alt="Average Face In My Shape" width="200px">
+                    <p class="caption">Average Not Smiling</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/4/average_face_br_happy_men.jpg" alt="My Face In Average Shape" width="200px">
+                    <p class="caption">Average Smiling Man</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/4/average_face_br_happy_women.jpg" alt="Average Face" width="200px">
+                    <p class="caption">Average Smiling Woman</p>
+                </div>
+            </div>
+
+            <p>
+                From the dataset, we are able to compute the average face, the average smiling face, the average non-smiling face, average smiling man and woman,
+                average non-smiling man and woman, and more. With these faces, we have their average geometry too, and are able to extrapolate
+                features from the dataset to objects outside of them. 
+            </p>
+            <p>
+                Here, we hypothesize that if I morph my face into the shape of the average Brazilian man, perhaps I'll look more Brazilian.
+                We can also go in the other direction and see what the average face would look like with my face's geometry- what the average Brazilian would look like if they looked more like me.
+            </p>
+
+
+            <div class="single-image">
+                <img src="../images/face-morphing/4/me_uncropped.jpg" alt="My Face Uncropped" width="150px">
+                <p class="caption">Me, ready to become Brazilian</p>
+            </div>
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/4/me.png" alt="My Face" width="200px">
+                    <p class="caption">My Face</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/4/br_happy_me_men.jpg" alt="Average Face In My Shape" width="200px">
+                    <p class="caption">Average Face In My Shape</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/4/me_happy_br_men.jpg" alt="My Face In Average Shape" width="200px">
+                    <p class="caption">My Face In Average Shape</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/4/average_face_br_happy_men.jpg" alt="Average Face" width="200px">
+                    <p class="caption">Average Face</p>
+                </div>
+            </div>
+
+            <h2 id="Caricatures">Caricatures: Extrapolating from the mean</h2>
+            <h3>Implementation</h3>
+            <p>
+                To create caricatures, we implement an extrapolation technique that exaggerates the differences between an individual's facial features and the average face of a population. The keypoints of the individual's face are compared to those of the average face, and we apply an extrapolation function to exaggerate the differences:
+            </p>
+            <p>
+                <mathjax>$$ P_{\text{caricature}} = P_{\text{average}} + t \cdot (P_{\text{individual}} - P_{\text{average}}) $$</mathjax>
+            </p>
+            <p>
+                Here, \( t \) is the extrapolation factor, which controls the degree of exaggeration. By varying \( t \), we can control how exaggerated the caricature becomes. A higher value of \( t \) results in a more pronounced caricature. After applying this transformation, the original face is warped to match the exaggerated points, creating the caricature.
+            </p>
+            
+            <h3>Results</h3>
+            <p>
+                By varying the extrapolation factor, we can create caricatures with different levels of exaggeration:
+            </p>
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/5/me_caricature_0.0.png" alt="Original Face" width="100%">
+                    <p class="caption">Original Face (Not Brazilian) <br>[t = 0.0]</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/5/me_caricature_0.5.jpg" alt="Mild Caricature" width="100%">
+                    <p class="caption">Mild Caricature (Slightly Brazilian)<br>[t = 0.5]</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/5/me_caricature_1.5.jpg" alt="Strong Caricature" width="100%">
+                    <p class="caption">Strong Caricature (Very Brazilian)<br>[t = 1.5]</p>
+                </div>
+            </div>
+
+            <h2 id="Extras">Extras</h2>
+            <p>
+                Please enjoy the following <a href="https://www.youtube.com/watch?v=nL6Ct9tGu0c">extras</a>:
+            </p>
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/extra/chloe_loop_faster.gif" alt="Chloe Morph Sequence" width="100%">
+                    <p class="caption">Chloe Little Kid</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/extra/colin_loop_faster.gif" alt="Colin Morph Sequence" width="100%">
+                    <p class="caption">Colin Sigma</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/face-morphing/extra/miguel_loop_faster.gif" alt="Miguel Morph Sequence" width="100%">
+                    <p class="caption">Miguel Chimp</p>
+                </div>
+            </div>
+
+            <h2>Conclusion</h2>
+            <p>
+                This project was a fun exercise in linear algebra, statistics, and image processing. 
+                Using affine transforms to warp our images in interesting ways gave us an exciting tool, enabling face morphing. 
+                Additionally, using a dataset of different faces within a subpopulation allowed us to perform statistical analysis 
+                on it and ask questions such as "what does the average face look like?". 
+                Pairing this with our face morphing, we were able to apply our linear algebra to infer what a face 
+                with exaggerated features would look like by extrapolating different features from the mean. 
+                Overall, this project not only provided an entertaining way to apply mathematical concepts but also highlighted the 
+                broader implications of these techniques in fields such as computer graphics and anthropology, 
+                demonstrating a fascinating intersection between mathematics, computer vision, and human perception.
+                
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>
