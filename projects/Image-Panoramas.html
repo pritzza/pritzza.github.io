@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Warping and Mosaicing</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+
+<body>
+    <div id="ambient-detail"></div>
+
+    <header>
+        <nav class="nav-links">
+            <a href="#Images">Correspondences</a>
+            <a href="#Homographies">Homographies</a>
+            <a href="#Warping">Warping</a>
+            <a href="#Rectification">Rectification</a>
+            <a href="#Mosaics">Mosaics</a>
+        </nav>
+    </header>
+
+    <div id="container">
+        <div id="header">
+            <h1>Warping and Mosaicing</h1>
+            <p>By Jonathan Zakharov</p>
+        </div>
+
+        <div id="article">
+            <div class="single-image">
+                <a href="#"><img src="../images/image-panoramas/5/cal_mosaic.png" alt="Cal Mosaic" height="400px"></a>
+            </div>
+
+            <h2>Introduction</h2>
+            <p>
+                This project focused on implementing perspective image warping and mosaicing to create panoramic images from multiple images. This was accomplished by computing the homographies between images, warping said images, and then blending them together into panoramas. Through this project, we gained practical experience with concepts in linear algebra, computational photography and computer vision, learning how to make our own panoramic images from scratch.
+            </p>
+
+            <h2 id="Images">Starting Images</h2>
+
+            <h3>Implementation</h3>
+            <p>
+                To begin, we needed to go out and take photos such that we could compute the homographies between images in a set. A perspective transform or a homography relates two images when they have a shared center of projection. In practice this means taking photos of a scene from the same exact position, only changing the pitch and yaw along the axis of rotations of the camera.
+            </p>
+            <p>
+                Here we capture some photos of Cal, the bay, and the cluttered desk I sit at now.
+            </p>
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/1/cal_l.png" alt="Left Image of Cal" width="300px">
+                    <p class="caption">Left Image of Cal</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/1/cal_r.png" alt="Right Image of Cal" width="300px">
+                    <p class="caption">Right Image of Cal</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/1/sf_l.png" alt="Left Image of San Francisco with Keypoints" width="300px">
+                    <p class="caption">Left Image of San Francisco with Keypoints</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/1/sf_r.png" alt="Right Image of San Francisco with Keypoints" width="300px">
+                    <p class="caption">Right Image of San Francisco with Keypoints</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/1/desk_l.png" alt="Left Desk Image with Triangulation" width="300px">
+                    <p class="caption">Left Desk Image with Triangulation</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/1/desk_r.png" alt="Right Desk Image with Triangulation" width="300px">
+                    <p class="caption">Right Desk Image with Triangulation</p>
+                </div>
+            </div>
+
+            <h2 id="Homographies">Recovering Homographies</h2>
+
+            <h3>Mathematical Foundation</h3>
+            <p>
+                A homography is a projective transformation that maps points from one plane to another. In the context of image processing, it allows us to relate two images of the same planar surface taken from different viewpoints. Mathematically, a homography $H$ is represented by a 3x3 matrix:
+            </p>
+            
+            $$
+                H = \begin{bmatrix}
+                h_{11} & h_{12} & h_{13} \\
+                h_{21} & h_{22} & h_{23} \\
+                h_{31} & h_{32} & h_{33}
+                \end{bmatrix}
+            $$
+            
+            <p>
+                This matrix has 9 elements, but because it is defined up to a scale factor, it effectively has 8 degrees of freedom.
+
+                Given a point $(x, y)$ in the first image and its corresponding point $(x', y')$ in the second image, the homography relation can be expressed as:
+            </p>
+            
+            $$
+                \begin{bmatrix} wx' \\ wy' \\ w \end{bmatrix} = H \begin{bmatrix} x \\ y \\ 1 \end{bmatrix}
+            $$
+                
+            <p>
+            </p>
+            
+                $$x' = \frac{h_{11}x + h_{12}y + h_{13}}{h_{31}x + h_{32}y + h_{33}}$$
+            
+                $$y' = \frac{h_{21}x + h_{22}y + h_{23}}{h_{31}x + h_{32}y + h_{33}}$$
+
+            <h3>Linear System Setup</h3>
+            <p>
+                To solve for the homography matrix, we rearrange these equations into a linear system. For each point correspondence, we get two equations:
+            </p>
+            
+                $$x'(h_{31}x + h_{32}y + h_{33}) = h_{11}x + h_{12}y + h_{13}$$
+                $$y'(h_{31}x + h_{32}y + h_{33}) = h_{21}x + h_{22}y + h_{23}$$
+            
+            <p>
+                These can be rewritten as:
+            </p>
+            
+            $$
+                \begin{bmatrix} 
+                x & y & 1 & 0 & 0 & 0 & -xx' & -yx' & -x' \\
+                0 & 0 & 0 & x & y & 1 & -xy' & -yy' & -y'
+                \end{bmatrix} 
+                \begin{bmatrix} h_{11} \\ h_{12} \\ h_{13} \\ h_{21} \\ h_{22} \\ h_{23} \\ h_{31} \\ h_{32} \\ h_{33} \end{bmatrix} = \begin{bmatrix} 0 \\ 0 \end{bmatrix}
+            $$
+            
+            <h3>Implementation</h3>
+            <p>
+                The <code>compute_homography</code> function in <code>warp_img.py</code> implements this process by setting up the system of linear equations $Ah = 0$, where $A$ is the matrix of coefficients from the equations above, and $h$ is the vector of homography matrix elements.
+            </p>
+            
+            <p>
+                With 4 point correspondences, we get 8 equations, which is sufficient to solve for the 8 degrees of freedom in the homography matrix. However, to improve robustness, we typically use more than 4 points and solve the overdetermined system using the least squares method.
+                This is just a call to <code>np.linalg.lstsq</code>.
+            </p>
+    
+            <h3>Results</h3>
+            <p>
+                We illustrate the effect of a perspective transform on a grid. The right image was create with the help of Photoshop's perspective warp tool. Applying the homography to the grid indeed gives us the same perspective transformed grid.
+            </p>
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/2/grid.png" alt="Original Grid" width="100%">
+                    <p class="caption">Original Grid</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/2/persp_grid.png" alt="Perspective Transformed Grid" width="100%">
+                    <p class="caption">Perspective Transformed Grid</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/2/grid_points.png" alt="Grid with Point Correspondences" width="100%">
+                    <p class="caption">Grid with Point Correspondences</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/2/perp_grid_points.png" alt="Transformed Grid with Point Correspondences" width="100%">
+                    <p class="caption">Transformed Grid with Point Correspondences</p>
+                </div>
+            </div>
+            <div class="single-image">
+                <a href="#"><img src="../images/image-panoramas/2/warped.png" alt="Warped Image Result" height="300px"></a>
+                <p class="caption">Warped Image Result</p>
+            </div>
+
+
+            <h2 id="Warping">Image Warping</h2>
+            <h3>Implementation</h3>
+            <p>
+                Once the homography is computed, we want to warp one image to align with another in the same image plane. The <code>warp_image</code> function in <code>warp_img.py</code> implements inverse warping for this purpose. It computes the inverse of the homography matrix and, for each pixel in the output image, calculates the corresponding location in the input image. To ensure all warped content is captured in the output image, we implement a helper method <code>compute_warped_image_bb</code> which calculates the bounding box and displacement of the warped image by transforming the corners of the original image.
+            </p>
+
+            <h3>Results</h3>
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/3/caL_l_points.png" alt="Left Cal Image with Points" width="100%">
+                    <p class="caption">Left Cal Image with Points</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/3/cal_r_points.png" alt="Right Cal Image with Points" width="100%">
+                    <p class="caption">Right Cal Image with Points</p>
+                </div>
+            </div>
+            <div class="single-image">
+                <a href="#"><img src="../images/image-panoramas/3/cal_warped.png" alt="Warped Cal Image" height="300px"></a>
+                <p class="caption">Warped Cal</p>
+            </div>
+
+            <h2 id="Rectification">Image Rectification</h2>
+            <h3>Implementation</h3>
+            <p>
+                Image rectification serves as a benchmark for the success of our homography calculations and image warping implementations. Our <code>rectify_image</code> function in <code>rectify.py</code> demonstrates this process by taking an input image, a set of points defining a rectangular object in the image, and the desired dimensions of the rectified object. It computes a homography between these points and a predefined rectangular grid, then applies this homography to warp the entire image. This process effectively simulates rotating the camera to point directly at the planar surface, removing perspective distortion. Successful rectification results in an image where the selected object appears as a rectangle, verifying that our homography and warping functions work.
+            </p>
+
+            <h3>Results</h3>
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/4/posted_points.png" alt="Poster Image with Points" width="200px">
+                    <p class="caption">My Pikmin 2 Poster</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/4/poster_rectified.png" alt="Rectified Poster Image" width="200px">
+                    <p class="caption">Rectified Pikmin 2 Poster</p>
+                </div>
+
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/4/insane_points.png" alt="Captcha Image with Points" width="200px">
+                    <p class="caption">An Insane Captcha</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/4/insane_rectified.png" alt="Rectified Captcha Image" width="200px">
+                    <p class="caption">Rectified Insane Captcha</p>
+                </div>
+            </div>
+
+            <h2 id="Mosaics">Blending and Mosaic Creation</h2>
+            <h3>Implementation</h3>
+            <p>
+                The ultimate goal of this project is to create panoramic images. With our successful implementation of image warping, the final step is to blend our warped images. The <code>blend_images</code> function in <code>mosaic.py</code> implements a simple blending technique. It creates a panorama canvas large enough to accommodate both images, places the second (unwarped) image onto the canvas, and then computes an average of the two images in the overlapping region.            </p>
+            <p>
+                The main function in <code>mosaic.py</code> outlines the overall mosaic creation process: first, it computes the homography between two images, then warps the first image to align with the second, and finally blends the warped image with the second image. While this approach produces a basic mosaic, it can result in some seams or ghosting artifacts when there are significant differences between images, like in lighting/exposure.
+            </p>
+            
+            <h3>Results</h3>
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/5/cal_left_pano.png" alt="Left Cal Panorama Image" width="100%">
+                    <p class="caption">Left Cal Panorama Image</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/5/cal_right_pano.png" alt="Right Cal Panorama Image" width="100%">
+                    <p class="caption">Right Cal Panorama Image</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/5/cal_left_mask.png" alt="Left Cal Mask" width="100%">
+                    <p class="caption">Left Cal Mask</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/5/cal_right_mask.png" alt="Right Cal Mask" width="100%">
+                    <p class="caption">Right Cal Mask</p>
+                </div>
+            </div>
+            <div class="single-image">
+                <a href="#"><img src="../images/image-panoramas/5/cal_mosaic.png" alt="Cal Mosaic Result" width="100%"></a>
+                <p class="caption">Cal Mosaic</p>
+            </div>
+            <div class="single-image">
+                <a href="#"><img src="../images/image-panoramas/5/sf_mosaic.png" alt="San Francisco Mosaic Result" width="100%"></a>
+                <p class="caption">The Bay</p>
+            </div>
+            <div class="single-image">
+                <a href="#"><img src="../images/image-panoramas/5/desk_mosaic.png" alt="Desk Mosaic Result" width="100%"></a>
+                <p class="caption">My desk right now</p>
+            </div>
+
+            <h2>Conclusion</h2>
+            <p>
+                This project provided valuable hands-on experience with fundamental techniques in computational photography and computer vision. By implementing homography computation, image warping, and basic blending, we gained practical insight into the challenges and intricacies of creating panoramic images from multiple photographs.
+            </p>
+            <p>
+            To be continued...
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>

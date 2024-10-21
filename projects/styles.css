@@ -195,6 +195,7 @@ a {
 .render-gallery img,.render-gallery3 img {
     border-radius: 10px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    max-width: 100%;
 }
 
 .render-gallery img:hover,.render-gallery3 img:hover {
