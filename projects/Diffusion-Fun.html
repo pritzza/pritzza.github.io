@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fun With Diffusion Models</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+
+<body>
+    <div id="ambient-detail"></div>
+
+    <header>
+        <nav class="nav-links">
+            <a href="#Denoising">Denoising</a>
+            <a href="#Generation">Generation</a>
+            <a href="#Scratch">From Scratch</a>
+        </nav>
+    </header>
+
+    <div id="container">
+        <div id="header">
+            <h1>Fun W/ Diffusion Models</h1>
+            <p>By Jonathan Zakharov</p>
+        </div>
+
+        <div id="article">
+
+            <h2>Introduction</h2>
+            <p>
+                This project dives into the world of diffusion models, exploring how they work and what makes
+                them powerful for generating and editing images. Starting with the basics, we investigated how noise
+                can be added and removed from images, then moved on to more advanced techniques like time-conditioned
+                architectures and class conditioning. Along the way, we applied these ideas to novel tasks
+                like inpainting, image-to-image translation, even creating visual anagrams, and hybrid images. </p>
+
+            <h3>Set Up</h3>
+            <p>
+                The project utilizes DeepFloyd IF, a two-stage text-to-image diffusion model which generates images from
+                text prompts.
+                We give the model a test run with some prompts before exploring and experimentating with various
+                capabilities
+                like testing different inference configurations, inpainting, and creating optical illusions.
+            </p>
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/0/5/hat.png" alt="Man with Hat - 5 Steps" width="300px">
+                    <p class="caption">A man wearing a hat <br>(5 inference steps)</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/0/5/ship.png" alt="Rocketship - 5 Steps" width="300px">
+                    <p class="caption">A rocketship <br>(5 inference steps)</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/0/5/snow.png" alt="Snowy Mountain Village - 5 Steps" width="300px">
+                    <p class="caption">An oil painting of a snowy mountain village <br>(5 inference steps)</p>
+                </div>
+
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/0/20/hat.png" alt="Man with Hat - 20 Steps" width="300px">
+                    <p class="caption">A man wearing a hat <br>(20 inference steps)</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/0/20/ship.png" alt="Rocketship - 20 Steps" width="300px">
+                    <p class="caption">A rocketship <br>(20 inference steps)</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/0/20/snow.png" alt="Snowy Mountain Village - 20 Steps" width="300px">
+                    <p class="caption">An oil painting of a snowy mountain village <br>(20 inference steps)</p>
+                </div>
+
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/0/200/hat.png" alt="Man with Hat - 200 Steps" width="300px">
+                    <p class="caption">A man wearing a hat <br>(200 inference steps)</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/0/200/ship.png" alt="Rocketship - 200 Steps" width="300px">
+                    <p class="caption">A rocketship <br>(200 inference steps)</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/0/200/snow.png" alt="Snowy Mountain Village - 200 Steps" width="300px">
+                    <p class="caption">An oil painting of a snowy mountain village <br>(200 inference steps)</p>
+                </div>
+            </div>
+
+            <h2 id="Denoising">Denoising</h2>
+            <h3>Implementing the Forward Process</h3>
+            <p>
+                The forward process simulates how clean images are gradually destroyed by adding noise.
+                This is the foundation of diffusion models.
+                This process is defined by:
+            </p>
+            <p>
+                $$q(x_t | x_0) = N(x_t ; \sqrt{\bar\alpha_t} x_0, (1 - \bar\alpha_t)\mathbf{I})$$
+            </p>
+            <p>
+                which is implemented using the following equation:
+            </p>
+            <p>
+                $$x_t = \sqrt{\bar\alpha_t} x_0 + \sqrt{1 - \bar\alpha_t} \epsilon \quad \text{where}~ \epsilon \sim
+                N(0, 1)$$
+            </p>
+            <p>
+                Here, the noise level is controlled by the parameter $\bar\alpha_t$. We implement this
+                forward() function which computes noisy versions of images at different timesteps.
+                We can see the output of the forward process in the images below,
+                using a test image of the Berkeley Campanile at $t=250, 500$, and $750$.
+            </p>
+
+            <!-- Original test image -->
+            <div class="single-image">
+                <img src="../images/diffusion-fun/A/1.1/raw.png" alt="Original Campanile Image" width="300px">
+                <p class="caption">Original test image (64x64 Campanile)</p>
+            </div>
+
+
+            <!-- Forward Process Results -->
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.1/250.png" alt="Noisy Image t=250" width="300px">
+                    <p class="caption">Noisy version at $t=250$</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.1/500.png" alt="Noisy Image t=500" width="300px">
+                    <p class="caption">Noisy version at $t=500$</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.1/750.png" alt="Noisy Image t=750" width="300px">
+                    <p class="caption">Noisy version at $t=750$</p>
+                </div>
+            </div>
+
+            <h3>Classical Denoising</h3>
+            <p>
+                We try to see if we can remove the noise we added to these image using classical methods.
+                Typically, noise (high frequency data) is removed with a low-pass filter.
+                Using Gaussian blur filtering with various kernel sizes, we attempted to denoise images
+                corrupted at different timesteps ($t=250, 500, 750$). We see that this is impossible.
+            </p>
+
+            <!-- Classical Denoising Results -->
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.1/250.png" alt="Noisy Image t=250" width="300px">
+                    <p class="caption">Noisy image at $t=250$</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.1/500.png" alt="Noisy Image t=500" width="300px">
+                    <p class="caption">Noisy image at $t=500$</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.1/750.png" alt="Noisy Image t=750" width="300px">
+                    <p class="caption">Noisy image at $t=750$</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.2/250.png" alt="Gaussian Denoised t=250" width="300px">
+                    <p class="caption">Gaussian-denoised version ($t=250, \sigma=2$, kernel size=5)</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.2/500.png" alt="Gaussian Denoised t=500" width="300px">
+                    <p class="caption">Gaussian-denoised version ($t=500, \sigma=2$, kernel size=5)</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.2/750.png" alt="Gaussian Denoised t=750" width="300px">
+                    <p class="caption">Gaussian-denoised version ($t=750, \sigma=2$, kernel size=5)</p>
+                </div>
+            </div>
+
+            <h3>One-Step Denoising</h3>
+            <p>
+                Instead of trying to solve this classically, we now try one-step denoising.
+                One-step denoising leverages a pretrained UNet from the DeepFloyd model to estimate and remove all the
+                noise in an image at once.
+                The process involves passing noisy images through the UNet, which predicts the noise
+                component, allowing us to recover an approximation of the original clean image.
+                The results here are much better than the Gaussian blurring.
+                But can still be improved.
+            </p>
+
+
+            <!-- One-Step Denoising Results -->
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.1/raw upscaled.png" alt="Original Image" width="300px">
+                    <p class="caption">Original image ($t=250$)</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.2/250.png" alt="Noisy Image t=250" width="300px">
+                    <p class="caption">Noisy version ($t=250$)</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.3/250 cleaned.png" alt="UNet Denoised t=250" width="300px">
+                    <p class="caption">UNet denoised version ($t=250$)</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.1/raw upscaled.png" alt="Original Image" width="300px">
+                    <p class="caption">Original image ($t=500$)</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.2/500.png" alt="Noisy Image t=500" width="300px">
+                    <p class="caption">Noisy version ($t=500$)</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.3/500 cleaned.png" alt="UNet Denoised t=500" width="300px">
+                    <p class="caption">UNet denoised version ($t=500$)</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.1/raw upscaled.png" alt="Original Image" width="300px">
+                    <p class="caption">Original image ($t=750$)</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.2/750.png" alt="Noisy Image t=750" width="300px">
+                    <p class="caption">Noisy version ($t=750$)</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.3/750 cleaned.png" alt="UNet Denoised t=750" width="300px">
+                    <p class="caption">UNet denoised version ($t=750$)</p>
+                </div>
+            </div>
+
+            <h3>Iterative Denoising</h3>
+            <p>
+                Iterative denoising improves upon one-step denoising by progressively reducing noise across multiple
+                timesteps. The process follows the equation:
+            </p>
+            <p>
+                $$x_{t'} = \frac{\sqrt{\bar\alpha_{t'}}\beta_t}{1 - \bar\alpha_t} x_0 + \frac{\sqrt{\alpha_t}(1 -
+                \bar\alpha_{t'})}{1 - \bar\alpha_t} x_t + v_\sigma$$
+            </p>
+            <p>
+                Using a custom schedule of "strided timesteps" from $t=990$ to $0$, we can gradually denoise the images,
+                maintaining the overall sturucture of the image. This approach proved
+                substantially more effective than both one-step denoising and Gaussian blurring.
+            </p>
+
+            <!-- Iterative Denoising Steps -->
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.4/690.png" alt="Denoising Step 690" width="300px">
+                    <p class="caption">Denoising process - Step 690</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.4/540.png" alt="Denoising Step 540" width="300px">
+                    <p class="caption">Denoising process - Step 540</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.4/390.png" alt="Denoising Step 390" width="300px">
+                    <p class="caption">Denoising process - Step 390</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.4/240.png" alt="Denoising Step 240" width="300px">
+                    <p class="caption">Denoising process - Step 240</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.4/90.png" alt="Denoising Step 90" width="300px">
+                    <p class="caption">Denoising process - Step 90</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.4/it.png" alt="Denoising Step 90" width="300px">
+                    <p class="caption">Denoising process - Complete</p>
+                </div>
+            </div>
+
+            <h3>Final Results</h3>
+
+
+            <!-- Final Comparison Grid -->
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.4/blurred.png" alt="Gaussian Blurred" width="300px">
+                    <p class="caption">Gaussian blurred result</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.4/single.png" alt="One-step Denoised" width="300px">
+                    <p class="caption">One-step denoised result</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.4/it.png" alt="Iteratively Denoised" width="300px">
+                    <p class="caption">Iteratively denoised result</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.1/raw upscaled.png" alt="Original Image" width="300px">
+                    <p class="caption">Original image</p>
+                </div>
+            </div>
+
+
+            <h2 id="Generation">Generation</h2>
+            <h3>Diffusion Model Sampling</h3>
+            <p>
+                Diffusion model sampling generates entirely new images by starting with pure Gaussian noise and
+                iteratively denoising it using text prompts. The process begins with random noise and applies the
+                iterative denoising function while conditioning on text embeddings like "a high quality photo." While
+                the generated images show some plausible features, they lack coherence and need some additional
+                guidance.
+            </p>
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.5/1.png" alt="Sampling Result 1" width="300px">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.5/2.png" alt="Sampling Result 2" width="300px">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.5/3.png" alt="Sampling Result 3" width="300px">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.5/4.png" alt="Sampling Result 4" width="300px">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.5/5.png" alt="Sampling Result 5" width="300px">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.5/6.png" alt="Sampling Result 5" width="300px">
+                </div>
+            </div>
+
+            <h3>Classifier-Free Guidance</h3>
+            <p>
+                CFG enhances image generation by combining conditional and unconditional noise estimates with a scaling
+                factor $\gamma$. The combination is performed according to:
+            </p>
+            <p>
+                $$\epsilon = \epsilon_u + \gamma (\epsilon_c - \epsilon_u)$$
+            </p>
+            <p>
+                where $\epsilon_u$ and $\epsilon_c$ are the unconditional and conditional noise estimates respectively.
+                This technique improves output quality by pushing the model to align closer with given prompts,
+                requiring two UNet passes at each timestep. Results show images with
+                sharper details and greater coherence.
+            </p>
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.6/1.png" alt="Classifier-Free Guidance Result 1" width="300px">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.6/2.png" alt="Classifier-Free Guidance Result 2" width="300px">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.6/3.png" alt="Classifier-Free Guidance Result 3" width="300px">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.6/4.png" alt="Classifier-Free Guidance Result 4" width="300px">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.6/5.png" alt="Classifier-Free Guidance Result 5" width="300px">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.6/6.png" alt="Classifier-Free Guidance Result 6" width="300px">
+                </div>
+            </div>
+
+            <h3>Image-to-Image Translation</h3>
+            <p>
+                This section explores diffusion models by seeing how they can modify existing images. By introducing
+                controlled noise to an image and then denoising it back iteratively, the model generates variations of
+                the original image. As the noise level increases, the edits become more significant, enabling both
+                subtle adjustments and creative transformations. This method is rooted in the SDEdit algorithm, which
+                forces a noisy image onto the manifold of natural images.
+            </p>
+
+            <div class="single-image">
+                <img src="../images/diffusion-fun/A/1.7.0/campanile original.png" alt="Original Campanile Image" width="300px">
+                <p class="caption">Input Image: Campanile</p>
+            </div>
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.0/camp 1.png" alt="Campanile Noise Level 1" width="300px">
+                    <p class="caption">Initial noise level</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.0/camp 3.png" alt="Campanile Translation Step 3" width="300px">
+                    <p class="caption">Translation step 3</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.0/camp 5.png" alt="Campanile Translation Step 5" width="300px">
+                    <p class="caption">Translation step 5</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.0/camp 7.png" alt="Campanile Translation Step 7" width="300px">
+                    <p class="caption">Translation step 7</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.0/camp 10.png" alt="Campanile Translation Step 10" width="300px">
+                    <p class="caption">Translation step 10</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.0/camp 20.png" alt="Campanile Translation Step 20" width="300px">
+                    <p class="caption">Translation step 20</p>
+                </div>
+            </div>
+
+            <div class="single-image">
+                <img src="../images/diffusion-fun/A/1.7.0/sunflower original.png" alt="Original Sunflower Image" width="300px">
+                <p class="caption">Input Image: Sunflower</p>
+            </div>
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.0/sun 1.png" alt="Sunflower Noise Level 1" width="300px">
+                    <p class="caption">Initial noise level</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.0/sun 3.png" alt="Sunflower Translation Step 3" width="300px">
+                    <p class="caption">Translation step 3</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.0/sun 5.png" alt="Sunflower Translation Step 5" width="300px">
+                    <p class="caption">Translation step 5</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.0/sun 7.png" alt="Sunflower Translation Step 7" width="300px">
+                    <p class="caption">Translation step 7</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.0/sun 10.png" alt="Sunflower Translation Step 10" width="300px">
+                    <p class="caption">Translation step 10</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.0/sun 20.png" alt="Sunflower Translation Step 20" width="300px">
+                    <p class="caption">Translation step 20</p>
+                </div>
+            </div>
+
+            <div class="single-image">
+                <img src="../images/diffusion-fun/A/1.7.0/calypso original.png" alt="Original Calypso Image" width="300px">
+                <p class="caption">Input Image: Calypso</p>
+            </div>
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.0/cal 1.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">Initial noise level</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.0/cal 3.png" alt="Calypso Translation Step 3" width="300px">
+                    <p class="caption">Translation step 3</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.0/cal 5.png" alt="Calypso Translation Step 5" width="300px">
+                    <p class="caption">Translation step 5</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.0/cal 7.png" alt="Calypso Translation Step 7" width="300px">
+                    <p class="caption">Translation step 7</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.0/cal 10.png" alt="Calypso Translation Step 10" width="300px">
+                    <p class="caption">Translation step 10</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.0/cal 20.png" alt="Calypso Translation Step 20" width="300px">
+                    <p class="caption">Translation step 20</p>
+                </div>
+            </div>
+
+            <h3>Editing Hand-Drawn and Web Images</h3>
+            <p>
+                Here we explore the model working with non-photorealistic inputs. By applying various
+                noise levels to hand-drawn sketches and pictures off the internet, then using CFG-guided denoising,
+                we can see how the model can maintain structural elements while adding realistic details, textures, and
+                lighting.
+            </p>
+
+            <div class="single-image">
+                <img src="../images/diffusion-fun/A/1.7.1/web/original.png" alt="Original web image of a sad cat meme" width="300px">
+                <p class="caption">Web Image Input: Sad Cat</p>
+            </div>
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.1/web/cat 1.png" alt="Sad cat meme transformed with noise level 1"
+                        width="300px">
+                    <p class="caption">Noise Level 1</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.1/web/cat 3.png" alt="Sad cat meme transformed with noise level 3"
+                        width="300px">
+                    <p class="caption">Noise Level 3</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.1/web/cat 5.png" alt="Sad cat meme transformed with noise level 5"
+                        width="300px">
+                    <p class="caption">Noise Level 5</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.1/web/cat 7.png" alt="Sad cat meme transformed with noise level 7"
+                        width="300px">
+                    <p class="caption">Noise Level 7</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.1/web/cat 10.png" alt="Sad cat meme transformed with noise level 10"
+                        width="300px">
+                    <p class="caption">Noise Level 10</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.1/web/cat 20 angry.png" alt="Sad cat meme transformed with noise level 20"
+                        width="300px">
+                    <p class="caption">Noise Level 20</p>
+                </div>
+            </div>
+
+            <div class="single-image">
+                <img src="../images/diffusion-fun/A/1.7.1/drawing1/drawing.png" alt="Hand-drawn sketch of a strawberry" width="300px">
+                <p class="caption">Hand-Drawn Input: Strawberry</p>
+            </div>
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.1/drawing1/1.png" alt="Hand-drawn strawberry transformed with noise level 1"
+                        width="300px">
+                    <p class="caption">Noise Level 1</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.1/drawing1/3.png" alt="Hand-drawn strawberry transformed with noise level 3"
+                        width="300px">
+                    <p class="caption">Noise Level 3</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.1/drawing1/5.png" alt="Hand-drawn strawberry transformed with noise level 5"
+                        width="300px">
+                    <p class="caption">Noise Level 5</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.1/drawing1/7.png" alt="Hand-drawn strawberry transformed with noise level 7"
+                        width="300px">
+                    <p class="caption">Noise Level 7</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.1/drawing1/10.png"
+                        alt="Hand-drawn strawberry transformed with noise level 10" width="300px">
+                    <p class="caption">Noise Level 10</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.1/drawing1/20.png"
+                        alt="Hand-drawn strawberry transformed with noise level 20" width="300px">
+                    <p class="caption">Noise Level 20</p>
+                </div>
+            </div>
+
+            <div class="single-image">
+                <img src="../images/diffusion-fun/A/1.7.1/drawing2/drawing.png" alt="Hand-drawn sketch of a log cabin" width="300px">
+                <p class="caption">Hand-Drawn Input: Log Cabin</p>
+            </div>
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.1/drawing2/1.png" alt="Hand-drawn log cabin transformed with noise level 1"
+                        width="300px">
+                    <p class="caption">Noise Level 1</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.1/drawing2/3.png" alt="Hand-drawn log cabin transformed with noise level 3"
+                        width="300px">
+                    <p class="caption">Noise Level 3</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.1/drawing2/5.png" alt="Hand-drawn log cabin transformed with noise level 5"
+                        width="300px">
+                    <p class="caption">Noise Level 5</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.1/drawing2/7.png" alt="Hand-drawn log cabin transformed with noise level 7"
+                        width="300px">
+                    <p class="caption">Noise Level 7</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.1/drawing2/10.png" alt="Hand-drawn log cabin transformed with noise level 10"
+                        width="300px">
+                    <p class="caption">Noise Level 10</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.1/drawing2/20.png" alt="Hand-drawn log cabin transformed with noise level 20"
+                        width="300px">
+                    <p class="caption">Noise Level 20</p>
+                </div>
+            </div>
+
+            <h3>In Painting</h3>
+            <p>
+                Inpainting is a technique that enables selective image region editing through masked diffusion.
+                The algorithm applies a binary mask during the denoising process:
+                $$x_t \leftarrow \textbf{m} x_t + (1 - \textbf{m})\text{forward}(x_{orig}, t)$$
+                At each timestep, the implementation maintains original content in unmasked regions while allowing
+                masked areas to undergo diffusion. The forward diffusion matches noise levels at each step $t$, ensuring
+                consistency across masked boundaries.
+            </p>
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.2/campanile_resized.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">Input Image: Campanile</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.2/1.7.2_to_replace.png" alt="Calypso Translation Step 3" width="300px">
+                    <p class="caption">Area To Inpaint</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.2/download (1).png" alt="Calypso Translation Step 5" width="300px">
+                    <p class="caption">Inpainted Image</p>
+                </div>
+            </div>
+
+
+            <h3>Text-Conditional Image-to-image Translation</h3>
+            <p>
+                Text-conditional translation combines iterative denoising with textual prompts to guide image
+                reconstruction. By conditioning the denoising process on descriptive prompts and adjusting CFG scales,
+                we get controlled transformations that balances prompt faithfulness and original image faithfulness.
+            </p>
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.3/1.1.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">Noise Level 1</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.3/1.3.png" alt="Calypso Translation Step 3" width="300px">
+                    <p class="caption">Noise Level 3</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.3/1.5.png" alt="Calypso Translation Step 5" width="300px">
+                    <p class="caption">Noise Level 5</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.3/1.7.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">Noise Level 7</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.3/1.10.png" alt="Calypso Translation Step 3" width="300px">
+                    <p class="caption">Noise Level 10</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.3/1.20.png" alt="Calypso Translation Step 5" width="300px">
+                    <p class="caption">Noise Level 20</p>
+                </div>
+            </div>
+
+            <br>
+
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.3/3.1.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">Noise Level 1</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.3/3.3.png" alt="Calypso Translation Step 3" width="300px">
+                    <p class="caption">Noise Level 3</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.3/3.5.png" alt="Calypso Translation Step 5" width="300px">
+                    <p class="caption">Noise Level 5</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.3/3.7.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">Noise Level 7</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.3/3.10.png" alt="Calypso Translation Step 3" width="300px">
+                    <p class="caption">Noise Level 10</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.3/3.20.png" alt="Calypso Translation Step 5" width="300px">
+                    <p class="caption">Noise Level 20</p>
+                </div>
+            </div>
+
+            <br>
+
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.3/2.1.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">Noise Level 1</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.3/2.3.png" alt="Calypso Translation Step 3" width="300px">
+                    <p class="caption">Noise Level 3</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.3/2.5.png" alt="Calypso Translation Step 5" width="300px">
+                    <p class="caption">Noise Level 5</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.3/2.7.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">Noise Level 7</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.3/2.10.png" alt="Calypso Translation Step 3" width="300px">
+                    <p class="caption">Noise Level 10</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.7.3/2.20.png" alt="Calypso Translation Step 5" width="300px">
+                    <p class="caption">Noise Level 20</p>
+                </div>
+            </div>
+
+            <h3>Visual Anagrams</h3>
+            <p>
+                Visual anagrams explores the creation of dual-perception images. The core algorithm combines two distinct noise estimates:
+                $$\epsilon_1 = \text{UNet}(x_t, t, p_1)$$
+                $$\epsilon_2 = \text{flip}(\text{UNet}(\text{flip}(x_t), t, p_2))$$
+                $$\epsilon = (\epsilon_1 + \epsilon_2) / 2$$
+                The implementation processes each timestep by generating noise estimates for both orientations
+                simultaneously (right side up and upside down). For the upright orientation, the UNet processes the image normally with a prompt ($p_1$). 
+                At the same time, the flipped orientation processes the image with a prompt ($p_2$). The noise estimates are then combined through
+                averaging, creating a single image with both interpretations.
+            </p>
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.8/1.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">People around a campfire</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.8/2.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">People around a campfire again</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.8/3.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">A rocketship taking off</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.8/1u.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">An old man</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.8/2u.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">A skull</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.8/3u.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">A dog</p>
+                </div>
+            </div>
+
+            <h3>Hybrid Images</h3>
+            <p>
+                Hybrid images uses factorized diffusion to create cool optical illusions.
+                Using frequency-based combination of noise estimate
+                $$\epsilon_1 = \text{UNet}(x_t, t, p_1)$$
+                $$\epsilon_2 = \text{UNet}(x_t, t, p_2)$$
+                $$\epsilon = f_\text{lowpass}(\epsilon_1) + f_\text{highpass}(\epsilon_2)$$
+                We process each denoising step by generating separate noise estimates from two
+                different prompts, then combining them through frequency filtering. A Gaussian blur with kernel size
+                $33$
+                and $\sigma =2$ was employed for the low-pass filter ($f_\text{lowpass}$), with the high-pass filter
+                ($f_\text{highpass}$) implemented as the residual from the low-pass operation. This results in
+                some cool images with different appearances depending on viewing distance.
+            </p>
+
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.9/1.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">A dog</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.9/2.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">A waterfall</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.9/3.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">A hipster barista</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.9/1.png" alt="Calypso Noise Level 1" width="50px">
+                    <p class="caption">An old man</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.9/2.png" alt="Calypso Noise Level 1" width="50px">
+                    <p class="caption">A skull</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/A/1.9/3.png" alt="Calypso Noise Level 1" width="50px">
+                    <p class="caption">A waterfall</p>
+                </div>
+            </div>
+            <h2 id="Scratch">From Scratch</h2>
+            <h3>Introduction</h3>
+            <p>
+                Now we implement diffusion models from scratch. Using the MNIST dataset, we'll progress from basic
+                denoising to a complete diffusion model implementation. The project evolved through three main phases: basic denoising,
+                time-conditioned diffusion, and class-conditioned generation.
+            </p>
+
+            <h3>UNet Architecture Development</h3>
+            <p>
+                First and foremost, the UNet architecture forms the foundation of the denoising system. The architecture can be
+                broken up into a few key components: Conv2d and BatchNorm2d, followed by DownConv and UpConv.
+            </p>
+
+            <div class="single-image">
+                <img src="../images/diffusion-fun/B/1.1/unconditional_arch.png" alt="Hand-drawn sketch of a log cabin" width="400px">
+                <p class="caption">Noising Process</p>
+            </div>
+
+            <h3>Denoiser Training and Testing</h3>
+            <p>
+                Training utilized the MNIST dataset. Initial experiments
+                 The training process, executed over
+                five epochs, produced a model capable of effective noise reduction, though with some limitations in fine
+                detail preservation.
+            </p>
+
+            <p>
+                Testing across varying noise levels $(\sigma = \[0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0 \])$ showed important details about model robustness.
+                The denoiser exhibited optimal performance at its trained noise level $(σ = 0.5)$ but showed decreased
+                effectiveness at both lower $(σ = 0.1)$ and higher $(σ = 0.9)$ noise levels.
+            </p>
+
+            <div class="single-image">
+                <img src="../images/diffusion-fun/B/1.2.2/noise process.png" alt="Hand-drawn sketch of a log cabin" width="400px">
+                <p class="caption">Noising Process</p>
+            </div>
+
+            <div class="render-gallery-item">
+                <img src="../images/diffusion-fun/B/1.2.2/0.0.png" alt="Calypso Noise Level 1" width="400px">
+                <p class="caption">Training, $\sigma = 0.0$</p>
+            </div>
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/B/1.2.2/0.2.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">Training, $\sigma = 0.2$</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/B/1.2.2/0.4.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">Training, $\sigma = 0.4$</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/B/1.2.2/0.5.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">Training, $\sigma = 0.5$</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/B/1.2.2/0.6.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">Training, $\sigma = 0.6$</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/B/1.2.2/0.8.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">Training, $\sigma = 0.8$</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/diffusion-fun/B/1.2.2/1.0.png" alt="Calypso Noise Level 1" width="300px">
+                    <p class="caption">Training, $\sigma = 1.0$</p>
+                </div>
+            </div>
+
+            <div class="single-image">
+                <img src="../images/diffusion-fun/B/1.2.2/loss.png" alt="Hand-drawn sketch of a log cabin" width="300px">
+                <p class="caption">Loss</p>
+            </div>
+
+            <h3>Adding Time Conditioning to UNet</h3>
+            <p>
+                As we we saw before, adding time conditioning results in significantly improved model performance.
+                By implementing FCBlocks, we were able to integrate timestep information
+                throughout the network. This upgrade took our basic denoiser to a time-aware system capable of progressive noise reduction.
+            </p>
+
+            <h3>Training and Sampling the Time-Conditioned Model</h3>
+            <p>
+                Training the complete diffusion model introduced additional complexity However.
+                The process required some careful thought for timestep sampling and corresponding noise generation. 
+                Training for 20 epochs now though, we were able to see the model converge.
+                The process of converting random noise into coherent digit representations still left alot to be desired.
+                There was still class conditioning for us to implement to improve our model further.
+            </p>
+
+            <div class="single-image">
+                <img src="../images/diffusion-fun/B/2.3/20.PNG" alt="Hand-drawn sketch of a log cabin" width="400px">
+                <p class="caption">Epoch 5</p>
+            </div>
+            <div class="render-gallery-item">
+                <img src="../images/diffusion-fun/B/2.3/5.PNG" alt="Hand-drawn sketch of a log cabin" width="400px">
+                <p class="caption">Epoch 20</p>
+            </div>
+            <div class="render-gallery-item">
+                <img src="../images/diffusion-fun/B/2.3/loss.png" alt="Hand-drawn sketch of a log cabin" width="400px">
+                <p class="caption">Loss</p>
+            </div>
+
+            <h3>Class-Conditioned Generation</h3>
+            <p>
+                The implementation of class conditioning introduced an additional dimension of control to the diffusion
+                model. The architecture was extended through the integration of additional FCBlocks specifically
+                designed for class information processing. A dropout mechanism with 10% probability was implemented to
+                enable both conditional and unconditional generation capabilities.
+                While still not perfect, the implementation had a high success rate of generating multiple instances of each digit
+                while maintatining high visual clarity and structure.
+            </p>
+
+            <div class="single-image">
+                <img src="../images/diffusion-fun/B/2.5/3.20.PNG" alt="Hand-drawn sketch of a log cabin" width="400px">
+                <p class="caption">Epoch 5</p>
+            </div>
+            <div class="render-gallery-item">
+                <img src="../images/diffusion-fun/B/2.5/3.5.PNG" alt="Hand-drawn sketch of a log cabin" width="400px">
+                <p class="caption">Epoch 20</p>
+            </div>
+            <div class="render-gallery-item">
+                <img src="../images/diffusion-fun/B/2.5/loss.png" alt="Hand-drawn sketch of a log cabin" width="400px">
+                <p class="caption">Loss</p>
+            </div>
+
+            <h3>Conclusion</h3>
+            <p>
+                Through this project, we gained a solid understanding of diffusion models, from their foundational
+                processes to more advanced applications. We learned what makes these models
+                effective, like how to tune their noise levels, choose the right architectures, and balance
+                trade-offs in generation quality. While there’s still room to improve their efficiency and robustness,
+                this project has shown how much potential diffusion models have for creative and technical tasks.
+                Overall, it’s been a really neat chance to finally dip my toes into the world of generative AI.
+            </p>
+        </div>
+</body>
+
+</html>

@@ -29,18 +29,19 @@
             <a href="#Warping">Warping</a>
             <a href="#Rectification">Rectification</a>
             <a href="#Mosaics">Mosaics</a>
+            <a href="#Automation">Automation</a>
         </nav>
     </header>
 
     <div id="container">
         <div id="header">
-            <h1>Warping and Mosaicing</h1>
+            <h1>Image Panoramas</h1>
             <p>By Jonathan Zakharov</p>
         </div>
 
         <div id="article">
             <div class="single-image">
-                <a href="#"><img src="../images/image-panoramas/5/cal_mosaic.png" alt="Cal Mosaic" height="400px"></a>
+                <a href="#"><img src="../images/image-panoramas/5/cal_mosaic.png" alt="Cal Mosaic" height="450px"></a>
             </div>
 
             <h2>Introduction</h2>
@@ -264,13 +265,189 @@
                 <p class="caption">My desk right now</p>
             </div>
 
+        </div>
+
+        <h2 id="Automation"></h2>
+        <div id="header">
+            <h1>Panorama Automation</h1>
+        </div>
+        <div id="article">
+            <h2 id="Introduction2">Introduction</h2>
+            <p>
+                In the previous part of the project, we successfully automated the process of creating panoramic photos, given a set of images from the same center of projection with explicit specification of feature points in images and their correspondences between images. Our goal now is to create panoramic images without the need to explicitly specify points and their correspondences between images. In other words, we want to develop a system for automating the detection, matching, and transformation of key image features in images. Our procedure will look like this
+            </p>
+            <ul>
+            <li>Detecting features in images.</li>
+            <li>Extracting descriptors for detected features.</li>
+            <li>Matching descriptors between images.</li>
+            <li>Computing homographies with RANSAC.</li>
+            <li>Mosaicing images into a panorama.</li>
+            </ul>
+            <p>
+            The result is to fully automatically generate panorama photos given only the images to mosaic as input.
+            </p>
+
+            <h2 id="Mosaics">Feature Detection</h2>
+            <h3>Implementation</h3>
+            <p>
+                Our goal in automatic image mosaicing is to automate the process of manually selecting correspondences between sets of images. To begin, we need to find feature points in an image that will have correspondences in other images we plan to mosaic together. Harris corner detection is a simple and effective way of identifying many high-interest regions or “corners” in each image that are likely to have corresponding points in other images.
+            </p>
+            <p>
+                The Harris Corner Detector is well-suited for detecting corner features that remain consistent across images. Due to its robustness, it was chosen to automate the task of identifying points that would otherwise need to be manually selected as correspondences for image stitching. We used an existing implementation of Harris corner detection, which returns all detected corner points, giving us thousands of feature points on each image. The next step is to determine which features in one image have corresponding features in another.
+            </p>
+            <h3>Results</h3>
+            <div class="single-image">
+                <a href="#"><img src="../images/image-panoramas/6/Harris.png" alt="Desk Mosaic Result" width="600px"></a>
+                <p class="caption">Harris Corner Detection</p>
+            </div>
+            <h2 id="Mosaics">Feaure Description Extraction</h2>
+            <h3>Implementation</h3>
+            <p>
+                Now that we have a good set of candidate points throughout our images, we need a way to identify which features in one image correspond to features in another. We achieve this by performing feature descriptor extraction. For each detected feature, a feature descriptor is extracted from a 40x40 pixel patch centered on the feature. To make patches robust to noise and minor lighting changes, bias/gain normalization and Gaussian blur were applied, and patches were resized to an 8x8 array, reducing computational complexity without sacrificing uniqueness.
+            </p>
+            <h3>Results</h3>
+            <p>Here are some 8x8 image patches extracted after extraction from Harris Corner Detection, lowpassed, normalized, and downscaled.</p>
+
+            <div class="render-gallery3">
+
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/patch_0.png" alt="Left Cal Panorama Image" width="50%">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/patch_1.png" alt="Left Cal Panorama Image" width="50%">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/patch_2.png" alt="Left Cal Panorama Image" width="50%">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/patch_3.png" alt="Left Cal Panorama Image" width="50%">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/patch_4.png" alt="Left Cal Panorama Image" width="50%">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/patch_6.png" alt="Left Cal Panorama Image" width="50%">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/patch_7.png" alt="Left Cal Panorama Image" width="50%">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/patch_8.png" alt="Left Cal Panorama Image" width="50%">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/patch_9.png" alt="Left Cal Panorama Image" width="50%">
+                </div>
+                
+            </div>
+            <h2 id="Mosaics">Feature Matching</h2>
+            <h3>Implementation</h3>
+            <p>
+                With two images and their sets of image feature patches, we aim to determine which features in one image have matching features in another. This is achieved using a K-D Tree with the 2-Nearest Neighbors (2-NN) approach. Lowe’s ratio test was applied to ensure that matches are reliable by comparing the two nearest neighbors of each point and retaining only those with clear closest matches.
+            </p>
+            <p>
+                We now have automatically generated matching points between images, identifying which points on multiple images correspond to each other. We’ve successfully automated the task of selecting matching points between images. Or have we?
+            </p>
+            <h3>Results</h3>
+            <p>Here are some image feature correspondence pairs. Notice how the correspondnces aren't perfect to create some invariance to transformations.</p>
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/matched_a_0.png" alt="Left Cal Panorama Image" width="50%">
+                    <p class="caption">Image A Patch</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/matched_b_0.png" alt="Right Cal Panorama Image" width="50%">
+                    <p class="caption">Image B Patch</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/matched_a_1.png" alt="Left Cal Mask" width="50%">
+                    <p class="caption">Image A Patch</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/matched_b_1.png" alt="Right Cal Mask" width="50%">
+                    <p class="caption">Image B Patch</p>
+                </div>                
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/matched_a_2.png" alt="Left Cal Mask" width="50%">
+                    <p class="caption">Image A Patch</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/matched_b_2.png" alt="Right Cal Mask" width="50%">
+                    <p class="caption">Image B Patch</p>
+                </div>
+            </div>
+            
+            <p>Here we visualize the strongest correspondence found between the images at the base of The Campanile.</p>
+            
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/single_l.png" alt="Left Cal Panorama Image" width="100%">
+                    <p class="caption">Left Image</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/single_r.png" alt="Right Cal Panorama Image" width="100%">
+                    <p class="caption">Right Image</p>
+                </div>
+            </div>
+
+            <p>Here are all of the correspondences between images, annotated by points of the same color. Notice the presence of false positive correspondences, but a majority cluster of true positives.</p>
+            
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/many_l.png" alt="Left Cal Mask" width="100%">
+                    <p class="caption">All Left Image Correspondences</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/many_r.png" alt="Right Cal Mask" width="100%">
+                    <p class="caption">All Right Image Correspondences</p>
+                </div>
+            </div>
+            <h2 id="Mosaics">Homography Computation Using RANSAC</h2>
+            <h3>Implementation</h3>
+            <p>
+                Feature matching performs well but may produce some false positives, resulting in outlier correspondences that reduce the accuracy of our least squares estimation when computing homographies between images. Our final step is to compute the homography using RANSAC, aligning matching points between images while detecting and removing outlier correspondences. This was achieved by iteratively selecting four random points to compute candidate homographies and evaluating the inliers based on a distance threshold. Of these candidate homographies, the one with the most inliers is used to compute the final homography using standard least squares.   
+            </p>
+            <h3>Results</h3>
+            <p>
+                We compare the results of our RANSAC-based homography estimation to the manual homography estimation. The differences are minimal, indicating that our RANSAC-based estimation is robust to outliers and produces a homography that is consistent with the manual estimation.
+            </p>
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/manual_warp.png" alt="Left Cal Panorama Image" width="100%">
+                    <p class="caption">Homography from manual points</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/image-panoramas/6/auto_warp.png" alt="Right Cal Panorama Image" width="100%">
+                    <p class="caption">Homography from RANSAC</p>
+                </div>
+            </div>
+
+            <h2 id="Mosaics">Putting it all Together</h2>
+
+            <p>
+                Taking our algorithms for automatically computing homographies, we then warp and blend the images together as before, achieveing fully automated panorama creation. The results of this process are shown below and nearly indistinguishable from the manual process. Success!
+            </p>
+            <div class="single-image">
+                <a href="#"><img src="../images/image-panoramas/7/cal_mosaic.png" alt="Cal Mosaic Result" width="100%"></a>
+                <p class="caption">Cal Mosaic</p>
+            </div>
+            <div class="single-image">
+                <a href="#"><img src="../images/image-panoramas/7/sf_mosaic.png" alt="San Francisco Mosaic Result" width="100%"></a>
+                <p class="caption">The Bay</p>
+            </div>
+            <div class="single-image">
+                <a href="#"><img src="../images/image-panoramas/7/desk_mosaic.png" alt="Desk Mosaic Result" width="100%"></a>
+                <p class="caption">My desk right now</p>
+            </div>
+
             <h2>Conclusion</h2>
             <p>
-                This project provided valuable hands-on experience with fundamental techniques in computational photography and computer vision. By implementing homography computation, image warping, and basic blending, we gained practical insight into the challenges and intricacies of creating panoramic images from multiple photographs.
+                Among the coolest things I've taken away from is RANSAC. Having not known about RANSAC before, I fint it is a fascinatingly robust and versatile statistical tool. I could see myself using it for many things. It was also really rewarding to be able to automate something which was laborious and not a straight forward/obvious computation.
             </p>
             <p>
-            To be continued...
+                This project provided valuable hands-on experience with fundamental techniques in computational photography and computer vision. By implementing homography computation, image warping, basic blending, image feature detection, and image feature matching, we gained practical insight into the challenges and intricacies of creating panoramic images from multiple photographs.
             </p>
+   
         </div>
     </div>
 </body>
