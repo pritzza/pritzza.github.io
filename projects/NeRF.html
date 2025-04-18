@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeRF</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+
+<body>
+    <div id="ambient-detail"></div>
+
+    <header>
+        <nav class="nav-links">
+            <a href="#2D">2D NeRF</a>
+            <a href="#3D">3D NeRF</a>
+
+        </nav>
+    </header>
+
+    <div id="container">
+        <div id="header">
+            <h1>Neural Radiance Field</h1>
+            <p>By Jonathan Zakharov</p>
+        </div>
+
+        <div id="article">
+
+            <h2 id="2D">2D Neural Field Implementation</h2>
+            <p>
+                For the first part of the project, I implemented a simplified 2D version of a neural field. This
+                required learning a continuous representation of a 2D image through a neural network that maps pixel
+                coordinates to RGB values.
+            </p>
+
+            <div class="single-image">
+                <img src="../images/nerf/1/mlp.jpg" width="70%">
+            </div>
+
+            <p>
+                The network architecture consists of a multi-layer perceptron (MLP) with positional encoding of the
+                input coordinates. I implemented positional encoding with $L=10$ frequency bands, transforming the 2D
+                coordinates into a 42-dimensional vector using sinusoidal functions:
+            </p>
+
+            <p>
+                $$PE(x) = \{x, sin(2^0\pi x), cos(2^0\pi x), sin(2^1\pi x), cos(2^1\pi x), ..., sin(2^{L-1}\pi x),
+                cos(2^{L-1}\pi x)\}$$
+            </p>
+
+            <p>
+                For training, I implemented a data loader that randomly samples 10,000 pixels per batch from the input
+                image. The model was trained using MSE loss and the Adam optimizer with a learning rate of 0.01.
+                Training for 3200 iterations achieved a PSNR of 26.7 dB on the test image. Through a little bit of
+                experimentation, I found that increasing the network width beyond 256 didn’t really do anything and that
+                reducing the positional encoding frequencies below $L=8$ reduced the quality of high frequency details.
+            </p>
+
+            <div class="single-image">
+                <img src="../images/nerf/1/fox/fox.jpg" width="400px">
+                <p class="caption">Original Fox Image</p>
+            </div>
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fox/iter100.jpg" width="300px">
+                    <p class="caption">100 Iterations</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fox/iter200.jpg" width="300px">
+                    <p class="caption">200 Iterations</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fox/iter400.jpg" width="300px">
+                    <p class="caption">400 Iterations</p>
+                </div>
+
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fox/iter800.jpg" width="300px">
+                    <p class="caption">800 Iterations</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fox/iter1600.png" width="300px">
+                    <p class="caption">1600 Iterations</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fox/iter3200.png" width="300px">
+                    <p class="caption">3200 Iterations</p>
+                </div>
+            </div>
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fox/fox.jpg" width="300px">
+                    <p class="caption">Original</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fox/iter3200.png" width="300px">
+                    <p class="caption">Learned</p>
+                </div>
+
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fox/loss.png" width="300px">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fox/psnr.png" width="300px">
+                </div>
+            </div>
+
+
+            <p>
+                Trying another image, notably one with more high frequency data, and had a lower PSNR.
+            </p>
+
+
+            <div class="single-image">
+                <img src="../images/nerf/1/fht/fossil_hill_trail.jpg" width="400px">
+                <p class="caption">Original Fossil Hill Trail Image</p>
+            </div>
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fht/iter100.jpg" width="300px">
+                    <p class="caption">100 Iterations</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fht/iter200.jpg" width="300px">
+                    <p class="caption">200 Iterations</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fht/iter400.jpg" width="300px">
+                    <p class="caption">400 Iterations</p>
+                </div>
+
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fht/iter800.jpg" width="300px">
+                    <p class="caption">800 Iterations</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fht/iter1600.png" width="300px">
+                    <p class="caption">1600 Iterations</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fht/iter3200.png" width="300px">
+                    <p class="caption">3200 Iterations</p>
+                </div>
+            </div>
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fht/fossil_hill_trail.jpg" width="300px">
+                    <p class="caption">Original</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fht/iter3200.png" width="300px">
+                    <p class="caption">Learned</p>
+                </div>
+
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fht/loss.png" width="300px">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/1/fht/psnr.png" width="300px">
+                </div>
+            </div>
+
+
+
+
+            <h2 id="3D">Fit a Neural Radiance Field from Multi-view ../images/nerf</h2>
+
+            <h3>Create Rays from Cameras</h3>
+            <p>
+                The first thing I had to do was to define some transformations from pixel coordinates to world-space
+                rays.
+            </p>
+            <p>
+                First is a camera-to-world transformation. The function transform(c2w, x_c) converts
+                points from camera space to world space using homogeneous coordinates.
+            </p>
+            <p>
+                Next is a pixel-to-camera conversion. The function pixel_to_camera(K, uv, s) inverts the projection
+                process, transforming pixel coordinates back to camera space. Given pixel coordinates (u, v), depth s,
+                and the camera intrinsic matrix K, it reconstructs the 3D point in camera space.
+            </p>
+            <p>
+                Finally, ray generation. The function pixel_to_ray(K, c2w, uv) combines the previous two transformations
+                to
+                generate rays for each pixel.
+            </p>
+
+            <h3>Sampling Implementation</h3>
+            <p>
+                The sampling part of the NeRF implementation involves two key components: sampling rays from ../images/nerf and
+                sampling points along those rays. This is the means by which the neural network learns.
+            </p>
+            <p>
+                To samples rays from ../images/nerf, I made a function to sample rays across multiple ../images/nerf by treating all
+                image pixels as a single pool. This approach involves flattening the pixels and randomly selecting rays
+                in one step. To do this, I made a RaysData class with a sample_rays function which takes as
+                input and outputs sampled rays. I had to adjust the UV coordinates by adding 0.5 to center them within
+                each
+                pixel, but these adjusted coordinates were then converted to ray origins (rays_o) and directions
+                (rays_d)
+                using camera intrinsics and extrinsics.
+            </p>
+            <p>
+                To sample points along each ray, I made a sample_points_along_rays function. It starts by
+                generating evenly spaced samples along the ray using np.linspace, then when a perturb flag
+                is set to true, a random offset is added to the sample positions to introduce variation
+                during training.
+            </p>
+
+            <h3>Putting it all together</h3>
+            <p>
+                To validate all the previous work, we visualize the results:
+            </p>
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/2/val1.png" width="300px">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/2/val2.png" width="300px">
+                </div>
+            </div>
+
+            <p>
+                We can see that we are correctly construction rays from the cameras and that the points are correctly
+                sampled along the rays. Thus the network is able to learn the correct density and color of the points,
+                which we'll describe next.
+            </p>
+
+            <h3>Neural Radiance Field</h3>
+            <p>
+                The network is designed to predict the density and color of points in space.
+            </p>
+
+            <div class="single-image">
+                <img src="../images/nerf/2/mlp_nerf.png" width="70%">
+            </div>
+
+            <p>
+                We positionally encode the positions and ray directions using $L=10$ and $L=4$ frequencies,
+                respectively.
+                For color prediction, the intermediate features are processed further, concatenated with the encoded ray
+                directions, and then passed through additional layers to predict RGB values. We apply a sigmoid
+                activation
+                to ensure the RGB output is between 0 and 1. This architecture also includes skip
+                connections to preserve the input signal and effectively model the view-dependent and geometric
+                characteristics of the 3D scene.
+            </p>
+
+            <h3>Volume Rendering</h3>
+            <p>
+                Volume rendering is how we synthesis novel views in NeRFs. The color of a ray \( C(\mathbf{r}) \) is
+                determined by integrating the contributions of points along its path, writen as:
+                \begin{align}
+                C(\mathbf{r}) = \int_{t_n}^{t_f} T(t) \sigma(\mathbf{r}(t)) \mathbf{c}(\mathbf{r}(t), \mathbf{d}) \, dt,
+                \quad
+                T(t) = \exp \left(-\int_{t_n}^t \sigma(\mathbf{r}(s)) \, ds\right),
+                \end{align}
+                where \( \sigma(\mathbf{r}(t)) \) represents the density at a point \( \mathbf{r}(t) \), \(
+                \mathbf{c}(\mathbf{r}(t), \mathbf{d}) \) is its emitted color, and \( T(t) \) is the transmittance,
+                capturing the fraction of light that reaches \( t \) without being absorbed.
+
+            </p>
+            <p>
+                In the discrete case, this is approximated by:
+                \begin{align}
+                \hat{C}(\mathbf{r}) = \sum_{i=1}^N T_i \left(1 - \exp(-\sigma_i \delta_i)\right) \mathbf{c}_i, \quad
+                T_i = \exp\left(-\sum_{j=1}^{i-1} \sigma_j \delta_j\right),
+                \end{align}
+                where \( \delta_i \) is the distance between consecutive samples, and \( T_i \) is the accumulated
+                transmittance up to the \( i \)-th point. This formulation is differentiable
+                which means we can train the network to predict densities \( \sigma_i \) and colors \( \mathbf{c}_i \),
+                allowing for our pretty novel view synthesis.
+            </p>
+            <p>
+                To implement this and calculate these integrals, we get the transmittance and alpha values for each 
+                sampled point along a ray to weight how much it contributions to the color to the final image. 
+            </p>
+
+            <h3>Training</h3>
+            <p>
+                After 2000 iterations with learning rate of 0.0005 and a batch size of 10,000 rays,
+                we get the following results:
+            </p>
+
+            <div class="render-gallery3">
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/2/nerf/iter58.jpg" width="300px">
+                    <p class="caption">~0 Iterations</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/2/nerf/iter166.jpg" width="300px">
+                    <p class="caption">~100 Iterations</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/2/nerf/iter228.jpg" width="300px">
+                    <p class="caption">~200 Iterations</p>
+                </div>
+
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/2/nerf/iter405.jpg" width="300px">
+                    <p class="caption">~400 Iterations</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/2/nerf/iter828.jpg" width="300px">
+                    <p class="caption">~800 Iterations</p>
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/2/nerf/iter1640.jpg" width="300px">
+                    <p class="caption">~1600 Iterations</p>
+                </div>
+            </div>
+
+
+            <div class="render-gallery">
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/2/nerf/train_loss_nerf.png" width="300px">
+                </div>
+                <div class="render-gallery-item">
+                    <img src="../images/nerf/2/nerf/train_psnr_nerf.png" width="300px">
+                </div>
+            </div>
+
+            <h3>Results</h3>
+            <p>
+                After everything is all said and done, we can stitch together novel views of our scene and see
+                that our neural representation does a pretty decent job.
+            </p>
+
+            <div class="single-image">
+                <img src="../images/nerf/2/nerf/training.gif" width="70%">
+            </div>
+
+        </div>
+</body>
+
+</html>
