@@ -179,7 +179,7 @@
 
 
 
-            <h2 id="3D">Fit a Neural Radiance Field from Multi-view ../images/nerf</h2>
+            <h2 id="3D">Fit a Neural Radiance Field from Multi-view Images</h2>
 
             <h3>Create Rays from Cameras</h3>
             <p>
@@ -203,11 +203,11 @@
 
             <h3>Sampling Implementation</h3>
             <p>
-                The sampling part of the NeRF implementation involves two key components: sampling rays from ../images/nerf and
+                The sampling part of the NeRF implementation involves two key components: sampling rays from images and
                 sampling points along those rays. This is the means by which the neural network learns.
             </p>
             <p>
-                To samples rays from ../images/nerf, I made a function to sample rays across multiple ../images/nerf by treating all
+                To samples rays from images, I made a function to sample rays across multiple images by treating all
                 image pixels as a single pool. This approach involves flattening the pixels and randomly selecting rays
                 in one step. To do this, I made a RaysData class with a sample_rays function which takes as
                 input and outputs sampled rays. I had to adjust the UV coordinates by adding 0.5 to center them within
