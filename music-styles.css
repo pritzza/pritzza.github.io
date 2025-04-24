@@ -1,0 +1,80 @@
+body {
+    font-family: 'Helvetica Neue', sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, rgb(224, 244, 227) 0%, #ffffff 100%);
+    background-size: 400% 400%;
+    animation: gradientAnimation 20s ease infinite;
+    overflow-x: hidden;
+  }
+  
+  #visualizer-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+  
+  header {
+    z-index: 2;
+    position: relative;
+    text-align: center;
+    margin: 1em 0;
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 1em 0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  nav.nav-links { display: flex; justify-content: center; gap: 2em; }
+  nav.nav-links a {
+    font-size: 1.3em;
+    color: #005f99;
+    transition: color 0.3s ease;
+    text-decoration: none;
+  }
+  nav.nav-links a:hover { color: #007acc; }
+  
+  #container {
+    z-index: 2;
+    position: relative;
+    text-align: left;
+    max-width: 700px;
+    margin: 2em auto;
+    padding: 2.5em;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 15px;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
+  }
+  
+  .audio-list h1 {
+    text-align: center;
+    margin-bottom: 1.5em;
+    color: #007acc;
+  }
+  
+  .audio-item { margin-bottom: 2em; }
+  
+  .audio-item h2 {
+    margin-bottom: 0.5em;
+    font-size: 1.5em;
+    color: #007acc;
+  }
+  .audio-item h2:hover { color: #008cde; }
+  
+  .audio-item p {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 0.5em;
+  }
+  
+  @keyframes gradientAnimation {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }

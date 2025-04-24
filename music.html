@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Music</title>
+  <link rel="stylesheet" href="music-styles.css">
+</head>
+<body>
+  <!-- Fullscreen background visualizer -->
+  <canvas id="visualizer-bg"></canvas>
+
+  <header>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="projects.html">Projects</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </header>
+
+  <div id="container">
+    <section class="audio-list">
+      <article class="audio-item">
+        <h2>Beach</h2>
+        <audio controls data-visualizer>
+          <source src="res/music/beach.mp3" type="audio/mpeg">
+        </audio>
+      </article>
+      <article class="audio-item">
+        <h2>C</h2>
+        <audio controls data-visualizer>
+          <source src="res/music/c.mp3" type="audio/mpeg">
+        </audio>
+      </article>
+      <article class="audio-item">
+        <h2>Frog</h2>
+        <audio controls data-visualizer>
+          <source src="res/music/frog.mp3" type="audio/mpeg">
+        </audio>
+      </article>
+      <article class="audio-item">
+        <h2>Grizzly~</h2>
+        <audio controls data-visualizer>
+          <source src="res/music/grizzly.mp3" type="audio/mpeg">
+        </audio>
+      </article>
+      <article class="audio-item">
+        <h2>Hig~</h2>
+        <audio controls data-visualizer>
+          <source src="res/music/hi.mp3" type="audio/mpeg">
+        </audio>
+      </article>
+      <article class="audio-item">
+        <h2>My House~</h2>
+        <audio controls data-visualizer>
+          <source src="res/music/my house.mp3" type="audio/mpeg">
+        </audio>
+      </article>
+      <article class="audio-item">
+        <h2>Scary Crow~</h2>
+        <audio controls data-visualizer>
+          <source src="res/music/scary crow.mp3" type="audio/mpeg">
+        </audio>
+      </article>
+      <article class="audio-item">
+        <h2>Space Chimp Wins Paul Coin</h2>
+        <audio controls data-visualizer>
+          <source src="res/music/space chimp wins paul coin.mp3" type="audio/mpeg">
+        </audio>
+      </article>
+      <article class="audio-item">
+        <h2>Underwater~</h2>
+        <audio controls data-visualizer>
+          <source src="res/music/underwater.mp3" type="audio/mpeg">
+        </audio>
+      </article>
+    </section>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const bgCanvas = document.getElementById('visualizer-bg');
+      const bgCtx    = bgCanvas.getContext('2d');
+    
+      // Resize canvas to fill window
+      function resizeBg() {
+        bgCanvas.width  = window.innerWidth;
+        bgCanvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resizeBg);
+      resizeBg();
+    
+      // — Web Audio setup —
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();               // create AudioContext :contentReference[oaicite:0]{index=0}
+      const analyser = audioCtx.createAnalyser();                                             // create AnalyserNode :contentReference[oaicite:1]{index=1}
+      analyser.fftSize = 4096;                                                                 // higher FFT resolution :contentReference[oaicite:2]{index=2}
+      const bufferLen = analyser.frequencyBinCount;                                           // now 2048 bins :contentReference[oaicite:3]{index=3}
+      const data      = new Uint8Array(bufferLen);                                            // array for frequency data :contentReference[oaicite:4]{index=4}
+    
+      // keep original bar-count for width calculation
+      const bars = 128;                                                                       
+    
+      // hook each <audio> into analyser
+      document.querySelectorAll('audio[data-visualizer]').forEach(audio => {
+        const src = audioCtx.createMediaElementSource(audio);                                  // media source :contentReference[oaicite:5]{index=5}
+        src.connect(analyser);
+        analyser.connect(audioCtx.destination);                                                // to speakers 
+        audio.addEventListener('play', () => {
+          if (audioCtx.state === 'suspended') audioCtx.resume();                                // resume if suspended :contentReference[oaicite:6]{index=6}
+        });
+      });
+    
+      // — Drawing loop —
+      let prevData = null;
+      function drawBg() {
+        requestAnimationFrame(drawBg);                                                         // animation frame :contentReference[oaicite:7]{index=7}
+        analyser.getByteFrequencyData(data);                                                  // fill data[] :contentReference[oaicite:8]{index=8}
+    
+        // decay smoothing
+        if (!prevData) prevData = new Uint8Array(bufferLen);
+        for (let i = 0; i < bufferLen; i++) {
+          data[i] = Math.max(data[i], prevData[i] * 0.9);
+          prevData[i] = data[i];
+        }
+    
+        // clear canvas
+        bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);                               // clearRect :contentReference[oaicite:9]{index=9}
+    
+        // ← RESTORED ORIGINAL BAR THICKNESS →
+        const barWidth = (bgCanvas.width / bars) * 1.2;                                      
+    
+        // pastel gradient
+        const gradient = bgCtx.createLinearGradient(0, 0, bgCanvas.width, bgCanvas.height);    // gradient :contentReference[oaicite:10]{index=10}
+        gradient.addColorStop(0, 'rgba(197,225,218,0.4)');
+    
+        // draw one bar per FFT bin
+        let x = 0;
+        for (let i = 0; i < bufferLen; i++) {
+          const v = data[i] / 255;
+          const barHeight = (v ** 2) * bgCanvas.height;
+          bgCtx.beginPath();
+          bgCtx.roundRect(x, bgCanvas.height - barHeight, barWidth - 2, barHeight, 4);         // rounded rect :contentReference[oaicite:11]{index=11}
+          bgCtx.fillStyle = gradient;
+          bgCtx.fill();
+          x += barWidth;
+        }
+      }
+    
+      drawBg();  // start drawing immediately
+    });
+    </script>
+    
+    
+</body>
+</html>
